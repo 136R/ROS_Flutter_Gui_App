@@ -159,7 +159,6 @@ class _SettingsPageState extends State<SettingsPage> {
       'robotFootprintTopic': AppLocalizations.of(context)!.robot_footprint_topic,
       'localCostmapTopic': AppLocalizations.of(context)!.local_cost_map_topic,
       'pointCloud2Topic': AppLocalizations.of(context)!.pointcloud2_topic,
-      'globalCostmapTopic': AppLocalizations.of(context)!.global_costmap_topic,
       'robotSize': AppLocalizations.of(context)!.robot_size,
     };
     return displayNames[key] ?? key;

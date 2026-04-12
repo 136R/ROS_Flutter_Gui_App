@@ -100,7 +100,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
   late final TextEditingController _localPathTopic;
   late final TextEditingController _tracePathTopic;
   late final TextEditingController _pointCloudTopic;
-  late final TextEditingController _globalCostTopic;
   late final TextEditingController _localCostTopic;
   late final TextEditingController _footprintTopic;
   late double _laserDotDraft;
@@ -123,8 +122,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
         TextEditingController(text: globalSetting.tracePathTopic);
     _pointCloudTopic =
         TextEditingController(text: globalSetting.pointCloud2Topic);
-    _globalCostTopic =
-        TextEditingController(text: globalSetting.globalCostmapTopic);
     _localCostTopic =
         TextEditingController(text: globalSetting.localCostmapTopic);
     _footprintTopic =
@@ -138,7 +135,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
     _localPathTopic.dispose();
     _tracePathTopic.dispose();
     _pointCloudTopic.dispose();
-    _globalCostTopic.dispose();
     _localCostTopic.dispose();
     _footprintTopic.dispose();
     super.dispose();
@@ -334,18 +330,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
       children: [
         _buildLayerHeader(context,
             id: 'grid', title: l10n.layer_grid, layerKey: 'grid'),
-        _buildLayerHeader(context,
-            id: 'gcost',
-            title: l10n.layer_global_costmap,
-            layerKey: 'globalCostmap'),
-        if (_openLayerIds.contains('gcost')) ...[
-          _buildTopicField(
-            context,
-            label: l10n.global_costmap_topic,
-            ctrl: _globalCostTopic,
-            backendKey: 'globalCostmapTopic',
-          ),
-        ],
         _buildLayerHeader(context,
             id: 'lcost',
             title: l10n.layer_local_costmap,
