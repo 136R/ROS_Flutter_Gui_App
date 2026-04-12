@@ -495,7 +495,7 @@ void RosGuiNode::OnFootprint(const geometry_msgs::msg::PolygonStamped::SharedPtr
 void RosGuiNode::OnLocalCostmap(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   const auto t = std::chrono::steady_clock::now();
   if (last_local_costmap_push_.time_since_epoch().count() != 0) {
-    if (t - last_local_costmap_push_ < std::chrono::seconds(5)) {
+    if (t - last_local_costmap_push_ < std::chrono::seconds(2)) {
       return;
     }
   }
