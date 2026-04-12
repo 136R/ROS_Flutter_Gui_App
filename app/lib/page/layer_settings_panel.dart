@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ros_flutter_gui_app/basic/layer_config.dart';
 import 'package:ros_flutter_gui_app/global/setting.dart';
 import 'package:ros_flutter_gui_app/language/l10n/gen/app_localizations.dart';
 import 'package:ros_flutter_gui_app/provider/global_state.dart';
@@ -355,6 +356,55 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
             label: l10n.local_cost_map_topic,
             ctrl: _localCostTopic,
             backendKey: 'localCostmapTopic',
+          ),
+          Consumer<GlobalState>(
+            builder: (ctx, gs, __) {
+              final cfg = gs.layerConfig['localCostmap'];
+              final style = cfg is LayerLocalCostmapConfig
+                  ? cfg.mapStyle
+                  : LocalCostmapMapStyle.costmap;
+              return _groupRowBorder(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.local_costmap_map_style,
+                        style: Theme.of(ctx).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<LocalCostmapMapStyle>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(
+                            value: LocalCostmapMapStyle.raw,
+                            label: Text(l10n.local_costmap_style_raw),
+                          ),
+                          ButtonSegment(
+                            value: LocalCostmapMapStyle.costmap,
+                            label: Text(l10n.local_costmap_style_costmap),
+                          ),
+                          ButtonSegment(
+                            value: LocalCostmapMapStyle.obs,
+                            label: Text(l10n.local_costmap_style_obs),
+                          ),
+                        ],
+                        selected: {style},
+                        onSelectionChanged: (next) {
+                          if (next.isEmpty) return;
+                          gs.patchLayer(
+                            'localCostmap',
+                            mapStyle: next.first,
+                          );
+                          gs.saveLayerSettings();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
         _buildLayerHeader(context,

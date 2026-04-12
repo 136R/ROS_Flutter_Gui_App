@@ -9,6 +9,7 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/utils.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_ros/buffer.h"
 
 #include <cstdio>
 #include <cmath>
@@ -88,6 +89,43 @@ void FillOccGridProto(const nav_msgs::msg::OccupancyGrid& in, ros_gui_backend::p
   for (int8_t v : in.data) {
     out->add_data(static_cast<int32_t>(v));
   }
+}
+
+bool FillOccGridProtoInMapFrame(const nav_msgs::msg::OccupancyGrid& in, const std::string& map_frame,
+    tf2_ros::Buffer& tf_buffer, ros_gui_backend::pb::OccupancyGridProto* out, std::string* err) {
+  if (!out) {
+    return false;
+  }
+  if (in.header.frame_id.empty()) {
+    if (err) {
+      *err = "occupancy grid empty frame_id";
+    }
+    return false;
+  }
+  if (in.header.frame_id == map_frame) {
+    FillOccGridProto(in, out);
+    return true;
+  }
+  geometry_msgs::msg::PoseStamped ps_in;
+  ps_in.header = in.header;
+  ps_in.pose = in.info.origin;
+  geometry_msgs::msg::TransformStamped tf_map_source;
+  try {
+    tf_map_source = tf_buffer.lookupTransform(map_frame, in.header.frame_id, tf2::TimePointZero);
+  } catch (const std::exception& e) {
+    if (err) {
+      *err = e.what();
+    }
+    return false;
+  }
+  geometry_msgs::msg::PoseStamped ps_out;
+  tf2::doTransform(ps_in, ps_out, tf_map_source);
+  nav_msgs::msg::OccupancyGrid mapped = in;
+  mapped.header.frame_id = map_frame;
+  mapped.header.stamp = in.header.stamp;
+  mapped.info.origin = ps_out.pose;
+  FillOccGridProto(mapped, out);
+  return true;
 }
 
 void FillPoseStampedMap(
@@ -463,7 +501,15 @@ void RosGuiNode::OnLocalCostmap(const nav_msgs::msg::OccupancyGrid::SharedPtr ms
   }
   last_local_costmap_push_ = t;
   ros_gui_backend::pb::RobotMessage out;
-  FillOccGridProto(*msg, out.mutable_local_costmap());
+  std::string e;
+  if (!tf_buffer_) {
+    FillOccGridProto(*msg, out.mutable_local_costmap());
+  } else if (!FillOccGridProtoInMapFrame(
+                 *msg, gui_settings_.MapFrameName, *tf_buffer_, out.mutable_local_costmap(), &e)) {
+    LOGGER_ERROR(
+        "OnLocalCostmap TF {} <- {} failed: {}", gui_settings_.MapFrameName, msg->header.frame_id, e);
+    FillOccGridProto(*msg, out.mutable_local_costmap());
+  }
   BroadcastRobotMsg(out);
 }
 
@@ -476,7 +522,15 @@ void RosGuiNode::OnGlobalCostmap(const nav_msgs::msg::OccupancyGrid::SharedPtr m
   }
   last_global_costmap_push_ = t;
   ros_gui_backend::pb::RobotMessage out;
-  FillOccGridProto(*msg, out.mutable_global_costmap());
+  std::string e;
+  if (!tf_buffer_) {
+    FillOccGridProto(*msg, out.mutable_global_costmap());
+  } else if (!FillOccGridProtoInMapFrame(
+                 *msg, gui_settings_.MapFrameName, *tf_buffer_, out.mutable_global_costmap(), &e)) {
+    LOGGER_ERROR(
+        "OnGlobalCostmap TF {} <- {} failed: {}", gui_settings_.MapFrameName, msg->header.frame_id, e);
+    FillOccGridProto(*msg, out.mutable_global_costmap());
+  }
   BroadcastRobotMsg(out);
 }
 

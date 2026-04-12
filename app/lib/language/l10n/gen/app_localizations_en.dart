@@ -242,6 +242,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get layer_local_costmap => 'Local Cost Map';
 
   @override
+  String get local_costmap_map_style => 'Display style';
+
+  @override
+  String get local_costmap_style_raw => 'Raw grid';
+
+  @override
+  String get local_costmap_style_costmap => 'Cost';
+
+  @override
+  String get local_costmap_style_obs => 'Obstacles';
+
+  @override
   String get layer_laser => 'Laser Data';
 
   @override

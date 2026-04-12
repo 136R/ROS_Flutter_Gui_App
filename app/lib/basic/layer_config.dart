@@ -20,6 +20,22 @@ LayerType? layerTypeFromStorageId(String id) {
   return null;
 }
 
+enum LocalCostmapMapStyle {
+  raw,
+  costmap,
+  obs;
+
+  String get storageValue => name;
+
+  static LocalCostmapMapStyle? tryParse(String? s) {
+    if (s == null || s.isEmpty) return null;
+    for (final v in LocalCostmapMapStyle.values) {
+      if (v.name == s) return v;
+    }
+    return null;
+  }
+}
+
 bool _isPathType(LayerType t) {
   return t == LayerType.globalPath ||
       t == LayerType.localPath ||
@@ -40,9 +56,13 @@ sealed class LayerConfig {
       case LayerType.grid:
         return LayerToggleConfig(layerType: t, enable: true);
       case LayerType.globalCostmap:
-      case LayerType.localCostmap:
       case LayerType.pointCloud:
         return LayerToggleConfig(layerType: t, enable: false);
+      case LayerType.localCostmap:
+        return LayerLocalCostmapConfig(
+          enable: false,
+          mapStyle: LocalCostmapMapStyle.costmap,
+        );
       case LayerType.laser:
         return LayerLaserConfig(
           enable: true,
@@ -81,6 +101,9 @@ sealed class LayerConfig {
     if (t == LayerType.laser) {
       return LayerLaserConfig.fromJson(j);
     }
+    if (t == LayerType.localCostmap) {
+      return LayerLocalCostmapConfig.fromJson(j);
+    }
     if (_isPathType(t)) {
       return LayerPathConfig.fromJson(j, t);
     }
@@ -105,12 +128,21 @@ sealed class LayerConfig {
           colorArgb: incoming.colorArgb.isNotEmpty ? incoming.colorArgb : p.colorArgb,
           dotRadius: incoming.dotRadius.isNotEmpty ? incoming.dotRadius : p.dotRadius,
         ),
+      LayerLocalCostmapConfig _ when incoming is LayerLocalCostmapConfig =>
+          LayerLocalCostmapConfig(
+            enable: incoming.enable,
+            mapStyle: incoming.mapStyle,
+          ),
+      LayerToggleConfig(:final layerType)
+          when incoming is LayerLocalCostmapConfig &&
+              layerType == LayerType.localCostmap =>
+        incoming,
       _ => previous,
     };
   }
 }
 
-enum LayerJsonType { toggle, path, laser }
+enum LayerJsonType { toggle, path, laser, localCostmap }
 
 final class LayerToggleConfig extends LayerConfig {
   @override
@@ -159,6 +191,33 @@ final class LayerPathConfig extends LayerConfig {
       };
 }
 
+final class LayerLocalCostmapConfig extends LayerConfig {
+  @override
+  LayerType get layerType => LayerType.localCostmap;
+
+  LocalCostmapMapStyle mapStyle;
+
+  LayerLocalCostmapConfig({
+    required super.enable,
+    required this.mapStyle,
+  });
+
+  factory LayerLocalCostmapConfig.fromJson(Map<String, dynamic> j) {
+    final parsed = LocalCostmapMapStyle.tryParse(j['mapStyle']?.toString());
+    return LayerLocalCostmapConfig(
+      enable: j['enable'] == true,
+      mapStyle: parsed ?? LocalCostmapMapStyle.costmap,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': LayerJsonType.localCostmap.name,
+        'enable': enable,
+        'mapStyle': mapStyle.storageValue,
+      };
+}
+
 final class LayerLaserConfig extends LayerConfig {
   @override
   LayerType get layerType => LayerType.laser;
@@ -194,6 +253,7 @@ LayerConfig patchLayerConfig(
   bool? enable,
   String? colorArgb,
   String? dotRadius,
+  LocalCostmapMapStyle? mapStyle,
 }) {
   return switch (current) {
     LayerToggleConfig c => LayerToggleConfig(
@@ -209,6 +269,10 @@ LayerConfig patchLayerConfig(
         enable: enable ?? c.enable,
         colorArgb: colorArgb ?? c.colorArgb,
         dotRadius: dotRadius ?? c.dotRadius,
+      ),
+    LayerLocalCostmapConfig c => LayerLocalCostmapConfig(
+        enable: enable ?? c.enable,
+        mapStyle: mapStyle ?? c.mapStyle,
       ),
   };
 }

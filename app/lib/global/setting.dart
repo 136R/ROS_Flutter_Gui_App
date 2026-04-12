@@ -757,7 +757,7 @@ class Setting {
   bool get showLocalCostmap {
     return prefs.getBool('showLocalCostmap') ?? true;
   }
-  
+
   void setShowLaser(bool show) {
     prefs.setBool('showLaser', show);
   }

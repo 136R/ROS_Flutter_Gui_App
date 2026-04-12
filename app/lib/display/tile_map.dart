@@ -420,7 +420,21 @@ class TileMapState extends State<TileMap> {
       builder: (context, wsChannel, globalState, _) {
         final layers = <Widget>[];
 
-       
+        if (globalState.isLayerVisible('localCostmap')) {
+          layers.add(ValueListenableBuilder(
+            valueListenable: wsChannel.localCostmap,
+            builder: (_, cm, ___) => buildLocalCostMapOverlayLayer(
+                  cm,
+                  0.5,
+                  toLatLng,
+                  globalState.localCostmapMapStyle(),
+                ),
+          ));
+        }
+        if (_obstacleEdits.isNotEmpty) {
+          layers.add(_buildObstacleEditLayer(meta, toLatLng));
+        }
+
         if (!widget.editMode && globalState.isLayerVisible('globalPath')) {
           final pathColor = globalState.layerColorFor(
               'globalPath', const Color(0xFF2196F3));
@@ -578,18 +592,6 @@ class TileMapState extends State<TileMap> {
                     : null,
               );
             },
-          ));
-        }
-
-        // 障碍物编辑层：放到最底层，避免遮挡其他图层
-        if (_obstacleEdits.isNotEmpty) {
-          layers.insert(0, _buildObstacleEditLayer(meta, toLatLng));
-        }
-        if (globalState.isLayerVisible('localCostmap')) {
-          layers.add(ValueListenableBuilder(
-            valueListenable: wsChannel.localCostmap,
-            builder: (_, cm, ___) =>
-                buildLocalCostMapOverlayLayer(cm, 0.5),
           ));
         }
 

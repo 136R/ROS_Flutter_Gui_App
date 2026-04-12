@@ -50,6 +50,7 @@ class GlobalState extends ChangeNotifier {
     bool? enable,
     String? colorArgb,
     String? dotRadius,
+    LocalCostmapMapStyle? mapStyle,
   }) {
     final cur = _layerConfig[layerId];
     if (cur == null) return;
@@ -58,8 +59,15 @@ class GlobalState extends ChangeNotifier {
       enable: enable,
       colorArgb: colorArgb,
       dotRadius: dotRadius,
+      mapStyle: mapStyle,
     );
     notifyListeners();
+  }
+
+  LocalCostmapMapStyle localCostmapMapStyle() {
+    final cfg = _layerConfig['localCostmap'];
+    if (cfg is LayerLocalCostmapConfig) return cfg.mapStyle;
+    return LocalCostmapMapStyle.costmap;
   }
 
   void setLayerState(String layerName, bool value) {
@@ -103,10 +111,11 @@ class GlobalState extends ChangeNotifier {
   Future<void> loadLayerSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final layerSettingsStr = prefs.getString(_layerSettingsKey);
+    Map<String, dynamic>? layerSettings;
 
     if (layerSettingsStr != null) {
       try {
-        final layerSettings =
+        layerSettings =
             Map<String, dynamic>.from(jsonDecode(layerSettingsStr));
         _applyLayerSettingsFromJson(layerSettings);
         for (final id in _layerIds) {
@@ -119,6 +128,16 @@ class GlobalState extends ChangeNotifier {
       } catch (e) {
         print('加载图层设置失败: $e');
       }
+    }
+    final legacyStyle = prefs.getString('localCostmapDisplayStyle');
+    final migrated = LocalCostmapMapStyle.tryParse(legacyStyle);
+    final localEntry = layerSettings?['localCostmap'];
+    final hadStoredMapStyle =
+        localEntry is Map && localEntry.containsKey('mapStyle');
+    if (migrated != null && !hadStoredMapStyle) {
+      patchLayer('localCostmap', mapStyle: migrated);
+      await prefs.remove('localCostmapDisplayStyle');
+      await saveLayerSettings();
     }
   }
 

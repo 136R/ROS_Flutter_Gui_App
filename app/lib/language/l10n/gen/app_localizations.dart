@@ -554,6 +554,30 @@ abstract class AppLocalizations {
   /// **'局部代价地图'**
   String get layer_local_costmap;
 
+  /// No description provided for @local_costmap_map_style.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示样式'**
+  String get local_costmap_map_style;
+
+  /// No description provided for @local_costmap_style_raw.
+  ///
+  /// In zh, this message translates to:
+  /// **'栅格'**
+  String get local_costmap_style_raw;
+
+  /// No description provided for @local_costmap_style_costmap.
+  ///
+  /// In zh, this message translates to:
+  /// **'代价'**
+  String get local_costmap_style_costmap;
+
+  /// No description provided for @local_costmap_style_obs.
+  ///
+  /// In zh, this message translates to:
+  /// **'障碍'**
+  String get local_costmap_style_obs;
+
   /// No description provided for @layer_laser.
   ///
   /// In zh, this message translates to:

@@ -237,6 +237,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get layer_local_costmap => '局部代价地图';
 
   @override
+  String get local_costmap_map_style => '显示样式';
+
+  @override
+  String get local_costmap_style_raw => '栅格';
+
+  @override
+  String get local_costmap_style_costmap => '代价';
+
+  @override
+  String get local_costmap_style_obs => '障碍';
+
+  @override
   String get layer_laser => '激光雷达数据';
 
   @override
