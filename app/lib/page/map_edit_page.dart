@@ -1168,9 +1168,10 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final dialogContext = context;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(AppLocalizations.of(context)!.map_management),
+      title: Text(AppLocalizations.of(dialogContext)!.map_management),
       content: SizedBox(
         width: 400,
         child: _loading
@@ -1183,16 +1184,16 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: _load,
-                        child: Text(AppLocalizations.of(context)!.retry),
+                        child: Text(AppLocalizations.of(dialogContext)!.retry),
                       ),
                     ],
                   )
                 : _mapNames.isEmpty
-                    ? Text(AppLocalizations.of(context)!.no_map)
+                    ? Text(AppLocalizations.of(dialogContext)!.no_map)
                     : ListView.builder(
                         shrinkWrap: true,
                         itemCount: _mapNames.length,
-                        itemBuilder: (context, index) {
+                        itemBuilder: (itemContext, index) {
                           final name = _mapNames[index];
                           final isCurrent = name == _currentMap;
                           final thumbUrl =
@@ -1235,7 +1236,7 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                       : () async {
                                           await widget.onSwitchMap(name);
                                         },
-                                  child: Text(AppLocalizations.of(context)!.edit),
+                                  child: Text(AppLocalizations.of(itemContext)!.edit),
                                 ),
                                 
                                 const SizedBox(width: 4),
@@ -1250,7 +1251,7 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      AppLocalizations.of(context)!.current_in_use,
+                                      AppLocalizations.of(itemContext)!.current_in_use,
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.green,
@@ -1262,7 +1263,7 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                     onPressed: () async {
                                       await widget.onSwitchMap(name);
                                     },
-                                    child: Text(AppLocalizations.of(context)!.switch_map),
+                                    child: Text(AppLocalizations.of(itemContext)!.switch_map),
                                   ),
                                   const SizedBox(width: 4),
                                 IconButton(
@@ -1271,24 +1272,24 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                     size: 20,
                                     color: isCurrent ? Colors.grey : Colors.red,
                                   ),
-                                  tooltip: isCurrent ? AppLocalizations.of(context)!.delete_map_tooltip_current : AppLocalizations.of(context)!.delete,
+                                  tooltip: isCurrent ? AppLocalizations.of(itemContext)!.delete_map_tooltip_current : AppLocalizations.of(itemContext)!.delete,
                                   onPressed: isCurrent
                                       ? null
                                       : () async {
                                     final confirm = await showDialog<bool>(
-                                      context: context,
+                                      context: dialogContext,
                                       builder: (ctx) => AlertDialog(
-                                        title: Text(AppLocalizations.of(context)!.confirm_delete),
-                                        content: Text(AppLocalizations.of(context)!.confirm_delete_map(name)),
+                                        title: Text(AppLocalizations.of(ctx)!.confirm_delete),
+                                        content: Text(AppLocalizations.of(ctx)!.confirm_delete_map(name)),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(ctx).pop(false),
-                                            child: Text(AppLocalizations.of(context)!.cancel),
+                                            child: Text(AppLocalizations.of(ctx)!.cancel),
                                           ),
                                           FilledButton(
                                             onPressed: () => Navigator.of(ctx).pop(true),
                                             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                                            child: Text(AppLocalizations.of(context)!.delete),
+                                            child: Text(AppLocalizations.of(ctx)!.delete),
                                           ),
                                         ],
                                       ),
@@ -1298,19 +1299,19 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                       await widget.httpChannel.deleteMap(name);
                                       if (!mounted) return;
                                       await _load();
-                                      if (!mounted) return;
+                                      if (!mounted || !dialogContext.mounted) return;
                                       toastification.show(
-                                        context: context,
+                                        context: dialogContext,
                                         type: ToastificationType.success,
-                                        title: Text(AppLocalizations.of(context)!.map_deleted(name)),
+                                        title: Text(AppLocalizations.of(dialogContext)!.map_deleted(name)),
                                         autoCloseDuration: const Duration(seconds: 2),
                                       );
                                     } catch (e) {
-                                      if (!mounted) return;
+                                      if (!mounted || !dialogContext.mounted) return;
                                       toastification.show(
-                                        context: context,
+                                        context: dialogContext,
                                         type: ToastificationType.error,
-                                        title: Text(AppLocalizations.of(context)!.delete_failed(e.toString())),
+                                        title: Text(AppLocalizations.of(dialogContext)!.delete_failed(e.toString())),
                                         autoCloseDuration: const Duration(seconds: 3),
                                       );
                                     }
@@ -1324,8 +1325,8 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(AppLocalizations.of(context)!.close),
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(AppLocalizations.of(dialogContext)!.close),
         ),
       ],
     );
