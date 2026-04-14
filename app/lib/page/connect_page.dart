@@ -75,7 +75,6 @@ class _ConnectPageState extends State<ConnectPage>
           final primaryColor = scheme.primary;
           final surface = scheme.surface;
           final onSurface = scheme.onSurface;
-          final viewPadding = MediaQuery.of(context).viewPadding;
           final screenWidth = MediaQuery.sizeOf(context).width;
           final cardMaxWidth = screenWidth < 600
               ? (screenWidth * 0.92).clamp(280.0, 460.0)
@@ -303,18 +302,6 @@ class _ConnectPageState extends State<ConnectPage>
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 12 + viewPadding.top,
-                  right: 12 + viewPadding.right,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _GlassIconButton(
-                      onPressed: () => Navigator.pushNamed(context, "/setting"),
-                      icon: Icons.settings_rounded,
-                      tint: primaryColor,
-                    ),
-                  ),
-                ),
               ],
             ),
           );
@@ -466,44 +453,6 @@ class _ConnectButtonShinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ConnectButtonShinePainter oldDelegate) {
     return oldDelegate.progress != progress;
-  }
-}
-
-class _GlassIconButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final IconData icon;
-  final Color tint;
-
-  const _GlassIconButton({
-    required this.onPressed,
-    required this.icon,
-    required this.tint,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 9, sigmaY: 9),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withOpacity(0.55),
-            border: Border.all(
-              color: scheme.outlineVariant.withOpacity(0.45),
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: IconButton(
-            onPressed: onPressed,
-            icon: Icon(icon, size: 22, color: tint.withOpacity(0.95)),
-            splashRadius: 22,
-            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-          ),
-        ),
-      ),
-    );
   }
 }
 

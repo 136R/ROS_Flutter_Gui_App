@@ -20,8 +20,8 @@ void RosGuiNode::PublishMapUpdate() {
   }
 }
 
-bool RosGuiNode::Init(const GuiAppSettings& gui_app) {
-  (void)gui_app;
+bool RosGuiNode::Init(const AppConfig& app_config) {
+  (void)app_config;
   MapManager::Instance()->SetOnMapUpdateCallback([this]() { PublishMapUpdate(); });
 
   map_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>("/map_manager/map", 1, true);
@@ -47,7 +47,7 @@ bool RosGuiNode::SetRobotStreamImageSubscription(
   return true;
 }
 
-bool RosGuiNode::ReloadGuiStreams(const GuiAppSettings& settings) {
+bool RosGuiNode::ReloadGuiStreams(const AppConfig& settings) {
   (void)settings;
   return false;
 }

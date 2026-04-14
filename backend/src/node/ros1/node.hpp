@@ -14,12 +14,12 @@ class RosGuiNode : public IRosGuiNode {
   RosGuiNode();
   ~RosGuiNode() override;
 
-  bool Init(const GuiAppSettings& gui_app) override;
+  bool Init(const AppConfig& app_config) override;
   void Run() override;
   void Shutdown() override;
   bool SetRobotStreamImageSubscription(
       const std::string& topic, bool subscribe, std::string* error_message) override;
-  bool ReloadGuiStreams(const GuiAppSettings& settings) override;
+  bool ReloadGuiStreams(const AppConfig& settings) override;
   bool PublishCmdVel(double vx, double vy, double vw) override;
   bool PublishNavGoal(double x, double y, double roll, double pitch, double yaw) override;
   bool PublishInitialPose(double x, double y, double roll, double pitch, double yaw) override;

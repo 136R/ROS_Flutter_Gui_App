@@ -248,10 +248,9 @@ void WebServer::RunImpl(WebServerConfig config) {
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
         if (req->getMethod() == drogon::Get) {
           LOGGER_INFO("GET /api/settings");
-          GuiAppSettings s{};
-          LoadGuiAppSettingsFile(&s);
+          const AppConfig& s = RootConfig::Instance()->App();
           nlohmann::json j;
-          GuiAppSettingsToJson(s, &j);
+          AppConfigToJson(s, &j);
           json_cb(std::move(callback), j.dump(), drogon::k200OK);
           return;
         }
@@ -263,19 +262,18 @@ void WebServer::RunImpl(WebServerConfig config) {
           json_cb(std::move(callback), JsonErrorBody("invalid json"), drogon::k400BadRequest);
           return;
         }
-        GuiAppSettings s{};
-        LoadGuiAppSettingsFile(&s);
-        GuiAppSettingsMergeJson(body, &s);
-        if (!SaveGuiAppSettingsFile(s)) {
+        AppConfig s = RootConfig::Instance()->App();
+        AppConfigMergeJson(body, &s);
+        if (!SaveAppConfigFile(s)) {
           json_cb(std::move(callback), JsonErrorBody("failed to save settings"), drogon::k500InternalServerError);
           return;
         }
-        Config::Instance()->MutableGuiApp() = s;
+        RootConfig::Instance()->MutableApp() = s;
         if (auto node = NodeManager::Instance()->GetNode()) {
           node->ReloadGuiStreams(s);
         }
         nlohmann::json out;
-        GuiAppSettingsToJson(s, &out);
+        AppConfigToJson(s, &out);
         json_cb(std::move(callback), out.dump(), drogon::k200OK);
       },
       {Get, Post});

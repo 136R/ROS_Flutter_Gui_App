@@ -83,15 +83,15 @@ struct SshTunnelSession {
 
 void SshTunnelWsController::handleNewConnection(
     const drogon::HttpRequestPtr&, const drogon::WebSocketConnectionPtr& conn) {
-  const auto& g = Config::Instance()->GuiApp();
-  if (g.SshHost.empty() || g.SshPort <= 0 || g.SshPort > 65535) {
+  const auto& g = RootConfig::Instance()->App();
+  if (g.SSHHost.empty() || g.SSHPort <= 0 || g.SSHPort > 65535) {
     conn->shutdown(drogon::CloseCode::kViolation, "SSH target not configured");
     return;
   }
-  const auto port = static_cast<uint16_t>(g.SshPort);
+  const auto port = static_cast<uint16_t>(g.SSHPort);
   trantor::InetAddress peer;
-  if (!ResolveToInetAddress(g.SshHost, port, &peer)) {
-    LOGGER_WARN("ssh tunnel: resolve failed host={} port={}", g.SshHost, g.SshPort);
+  if (!ResolveToInetAddress(g.SSHHost, port, &peer)) {
+    LOGGER_WARN("ssh tunnel: resolve failed host={} port={}", g.SSHHost, g.SSHPort);
     conn->shutdown(drogon::CloseCode::kViolation, "SSH resolve failed");
     return;
   }
@@ -146,7 +146,7 @@ void SshTunnelWsController::handleNewConnection(
 
   conn->setContext(sess);
   tcpClient->connect();
-  LOGGER_INFO("ssh tunnel ws peer={} -> {}:{}", conn->peerAddr().toIpPort(), g.SshHost, g.SshPort);
+  LOGGER_INFO("ssh tunnel ws peer={} -> {}:{}", conn->peerAddr().toIpPort(), g.SSHHost, g.SSHPort);
 }
 
 void SshTunnelWsController::handleNewMessage(

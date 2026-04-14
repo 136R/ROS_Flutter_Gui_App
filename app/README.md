@@ -78,8 +78,8 @@ flutter build web
 
 与地图、遥控使用**同一后端 HTTP 地址**。SSH 不是浏览器直连 TCP，而是：
 
-1. **连接机器人**：在连接页填写后端 IP 与端口并连上后，**SSH 隧道目标主机与当前机器人 IP 一致**（保存到后台的 `sshHost` 与 `robotIp` 同步）。
-2. **隧道**：客户端通过 **`ws://` / `wss://`**（页面为 HTTPS 时用 `wss`）访问后端的 **`/ws/ssh`**，由后端再 **TCP 连接到** `gui_app_settings.json` 中的 `sshHost:sshPort`（一般为远端 `sshd`）。因此需在 **设置 → SSH** 中配置 **端口、SSH 用户名与密码** 并保存到后台。
+1. **连接机器人**：在连接页填写后端 IP 与端口并连上后，**SSH 隧道目标主机与当前机器人 IP 一致**（保存到后台的 `SSHHost` 与 `robotIp` 同步）。
+2. **隧道**：客户端通过 **`ws://` / `wss://`**（页面为 HTTPS 时用 `wss`）访问后端的 **`/ws/ssh`**，由后端再 **TCP 连接到** `gui_app_settings.json` 中的 `SSHHost:SSHPort`（一般为远端 `sshd`）。因此需在 **设置 → SSH** 中配置 **端口、SSH 用户名与密码** 并保存到后台。
 3. **快捷指令**：主界面可打开「SSH 快捷指令」列表。每条指令可单独打开 **「sudo 执行」**：开启后，实际远端执行形式为  
    `echo '<SSH密码>' | sudo -S sh -c '<命令>'`  
    以便用 **当前填写的 SSH 登录密码** 通过 `sudo -S` 提权（请确保该用户具备 sudo 且密码与 SSH 密码一致，否则应关闭 sudo 选项或改用无 sudo 的命令）。**命令内容可写实际 shell 行**（如 `shutdown -h now`）；若仍带前缀 `sudo `，发送前会自动去掉一层，避免重复。

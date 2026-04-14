@@ -48,12 +48,12 @@ class RosGuiNode : private detail::RosGuiNodeRclInit, public rclcpp::Node, publi
   RosGuiNode();
   ~RosGuiNode() override;
 
-  bool Init(const GuiAppSettings& gui_app) override;
+  bool Init(const AppConfig& app_config) override;
   void Run() override;
   void Shutdown() override;
   bool SetRobotStreamImageSubscription(
       const std::string& topic, bool subscribe, std::string* error_message) override;
-  bool ReloadGuiStreams(const GuiAppSettings& settings) override;
+  bool ReloadGuiStreams(const AppConfig& settings) override;
   bool PublishCmdVel(double vx, double vy, double vw) override;
   bool PublishNavGoal(double x, double y, double roll, double pitch, double yaw) override;
   bool PublishInitialPose(double x, double y, double roll, double pitch, double yaw) override;
@@ -109,7 +109,7 @@ class RosGuiNode : private detail::RosGuiNodeRclInit, public rclcpp::Node, publi
   std::unordered_map<std::string, rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr>
       compressed_image_subs_;
 
-  GuiAppSettings gui_settings_;
+  AppConfig gui_settings_;
   std::mutex image_mu_;
   std::mutex stream_mu_;
 

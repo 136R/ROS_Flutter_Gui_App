@@ -10,7 +10,7 @@ String _stripLeadingSudoToken(String cmd) {
   return s;
 }
 
-String sshQuickCmdRemoteLine(SshQuickCmd c, String sshPassword) {
+String sshQuickCmdRemoteLine(SshQuickCmd c, String SSHPassword) {
   final raw = c.cmd.trim();
   if (!c.useSudo) {
     return raw;
@@ -19,7 +19,7 @@ String sshQuickCmdRemoteLine(SshQuickCmd c, String sshPassword) {
   if (cmd.isEmpty) {
     return raw;
   }
-  final pass = sshPassword;
+  final pass = SSHPassword;
   if (pass.isEmpty) {
     return raw;
   }
@@ -67,7 +67,7 @@ class SshQuickCmd {
   }
 }
 
-List<SshQuickCmd> defaultSshQuickCommands() => const [
+List<SshQuickCmd> defaultSSHQuickCommands() => const [
       SshQuickCmd(name: '关机', cmd: 'shutdown -h now', useSudo: true),
       SshQuickCmd(name: '重启', cmd: 'reboot', useSudo: true),
     ];

@@ -14,7 +14,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/GetYamlCpp.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/GetFmt.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/GetDrogon.cmake)
 
-find_package(Boost REQUIRED filesystem)
+find_package(Boost REQUIRED COMPONENTS filesystem program_options)
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED sdl2)

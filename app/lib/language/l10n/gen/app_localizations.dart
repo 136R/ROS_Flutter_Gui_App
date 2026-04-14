@@ -422,6 +422,66 @@ abstract class AppLocalizations {
   /// **'全局代价地图话题'**
   String get global_costmap_topic;
 
+  /// No description provided for @backend_setting.
+  ///
+  /// In zh, this message translates to:
+  /// **'后端设置'**
+  String get backend_setting;
+
+  /// No description provided for @map_publish_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图发布话题'**
+  String get map_publish_topic;
+
+  /// No description provided for @map_subscribe_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图订阅话题'**
+  String get map_subscribe_topic;
+
+  /// No description provided for @map_manager_frame.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图管理坐标系'**
+  String get map_manager_frame;
+
+  /// No description provided for @nav_to_pose_status_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'单点导航状态话题'**
+  String get nav_to_pose_status_topic;
+
+  /// No description provided for @nav_through_poses_status_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'多点导航状态话题'**
+  String get nav_through_poses_status_topic;
+
+  /// No description provided for @topology_live_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'拓扑实时话题'**
+  String get topology_live_topic;
+
+  /// No description provided for @topology_json_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'拓扑JSON话题'**
+  String get topology_json_topic;
+
+  /// No description provided for @topology_publish_topic.
+  ///
+  /// In zh, this message translates to:
+  /// **'拓扑发布话题'**
+  String get topology_publish_topic;
+
+  /// No description provided for @diagnostic_topic_label.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断话题'**
+  String get diagnostic_topic_label;
+
   /// No description provided for @robot_size.
   ///
   /// In zh, this message translates to:

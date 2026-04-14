@@ -51,11 +51,11 @@ class Setting {
 
   final Map<String, String> _backendGuiStrings = {};
 
-  String sshHost = '';
-  int sshPort = 22;
-  String sshUsername = '';
-  String sshPassword = '';
-  List<SshQuickCmd> sshQuickCommands = [];
+  String SSHHost = '';
+  int SSHPort = 22;
+  String SSHUsername = '';
+  String SSHPassword = '';
+  List<SshQuickCmd> SSHQuickCommands = [];
 
 // 定义一个映射关系，将Dart中的类名映射到JavaScript中的类名
   Map<String, JoyStickEvent> axisMapping = {
@@ -245,26 +245,26 @@ class Setting {
     _backendGuiStrings
       ..clear()
       ..addAll({
-        'navToPoseStatusTopic': 'navigate_to_pose/_action/status',
-        'navThroughPosesStatusTopic': 'navigate_through_poses/_action/status',
-        'laserTopic': 'scan',
-        'pointCloud2Topic': 'points',
-        'globalPathTopic': '/plan',
-        'localPathTopic': '/local_plan',
-        'tracePathTopic': '/transformed_global_plan',
-        'relocTopic': '/initialpose',
-        'navGoalTopic': '/goal_pose',
-        'OdometryTopic': '/wheel/odometry',
+        'NavToPoseStatusTopic': 'navigate_to_pose/_action/status',
+        'NavThroughPosesStatusTopic': 'navigate_through_poses/_action/status',
+        'LaserTopic': 'scan',
+        'PointCloud2Topic': 'points',
+        'GlobalPathTopic': '/plan',
+        'LocalPathTopic': '/local_plan',
+        'TracePathTopic': '/transformed_global_plan',
+        'RelocTopic': '/initialpose',
+        'NavGoalTopic': '/goal_pose',
+        'OdomTopic': '/wheel/odometry',
         'SpeedCtrlTopic': '/cmd_vel',
         'BatteryTopic': '/battery_status',
-        'robotFootprintTopic': '/local_costmap/published_footprint',
-        'localCostmapTopic': '/local_costmap/costmap',
-        'diagnosticTopic': '/diagnostics',
-        'topologyMapTopic': '/map/topology',
-        'topologyJsonTopic': '',
-        'topologyPublishTopic': '/map/topology/update',
-        'mapFrameName': 'map',
-        'baseLinkFrameName': 'base_link',
+        'RobotFootprintTopic': '/local_costmap/published_footprint',
+        'LocalCostmapTopic': '/local_costmap/costmap',
+        'DiagnosticTopic': '/diagnostics',
+        'TopologyLiveTopic': '/map/topology',
+        'TopologyJsonTopic': '',
+        'TopologyPublishTopic': '/map/topology/update',
+        'MapFrameName': 'map',
+        'BaseLinkFrameName': 'base_link',
       });
   }
 
@@ -282,26 +282,26 @@ class Setting {
     _backendGuiStrings
       ..clear()
       ..addAll({
-        'navToPoseStatusTopic': 'navigate_to_pose/_action/status',
-        'navThroughPosesStatusTopic': 'navigate_through_poses/_action/status',
-        'laserTopic': 'scan',
-        'pointCloud2Topic': 'points',
-        'globalPathTopic': '/move_base/DWAPlannerROS/global_plan',
-        'localPathTopic': '/move_base/DWAPlannerROS/local_plan',
-        'tracePathTopic': '/transformed_global_plan',
-        'relocTopic': '/initialpose',
-        'navGoalTopic': 'move_base_simple/goal',
-        'OdometryTopic': '/odom',
+        'NavToPoseStatusTopic': 'navigate_to_pose/_action/status',
+        'NavThroughPosesStatusTopic': 'navigate_through_poses/_action/status',
+        'LaserTopic': 'scan',
+        'PointCloud2Topic': 'points',
+        'GlobalPathTopic': '/move_base/DWAPlannerROS/global_plan',
+        'LocalPathTopic': '/move_base/DWAPlannerROS/local_plan',
+        'TracePathTopic': '/transformed_global_plan',
+        'RelocTopic': '/initialpose',
+        'NavGoalTopic': 'move_base_simple/goal',
+        'OdomTopic': '/odom',
         'SpeedCtrlTopic': '/cmd_vel',
         'BatteryTopic': '/battery_status',
-        'robotFootprintTopic': '/local_costmap/published_footprint',
-        'localCostmapTopic': '/local_costmap/costmap',
-        'diagnosticTopic': '/diagnostics',
-        'topologyMapTopic': '/map/topology',
-        'topologyJsonTopic': '',
-        'topologyPublishTopic': '/map/topology/update',
-        'mapFrameName': 'map',
-        'baseLinkFrameName': 'base_link',
+        'RobotFootprintTopic': '/local_costmap/published_footprint',
+        'LocalCostmapTopic': '/local_costmap/costmap',
+        'DiagnosticTopic': '/diagnostics',
+        'TopologyLiveTopic': '/map/topology',
+        'TopologyJsonTopic': '',
+        'TopologyPublishTopic': '/map/topology/update',
+        'MapFrameName': 'map',
+        'BaseLinkFrameName': 'base_link',
       });
   }
 
@@ -310,26 +310,30 @@ class Setting {
   }
 
   static const Set<String> backendGuiStorageKeys = {
-    'navToPoseStatusTopic',
-    'navThroughPosesStatusTopic',
-    'laserTopic',
-    'localPathTopic',
-    'globalPathTopic',
-    'tracePathTopic',
-    'OdometryTopic',
+    'MapPubTopic',
+    'MapSubTopic',
+    'MapManagerFrameId',
+    'NavToPoseStatusTopic',
+    'NavThroughPosesStatusTopic',
+    'LaserTopic',
+    'LocalPathTopic',
+    'GlobalPathTopic',
+    'TracePathTopic',
+    'OdomTopic',
     'BatteryTopic',
-    'robotFootprintTopic',
-    'localCostmapTopic',
-    'pointCloud2Topic',
-    'diagnosticTopic',
-    'topologyMapTopic',
-    'topologyJsonTopic',
-    'topologyPublishTopic',
-    'relocTopic',
-    'navGoalTopic',
+    'RobotFootprintTopic',
+    'LocalCostmapTopic',
+    'GlobalCostmapTopic',
+    'PointCloud2Topic',
+    'DiagnosticTopic',
+    'TopologyLiveTopic',
+    'TopologyJsonTopic',
+    'TopologyPublishTopic',
+    'RelocTopic',
+    'NavGoalTopic',
     'SpeedCtrlTopic',
-    'mapFrameName',
-    'baseLinkFrameName',
+    'MapFrameName',
+    'BaseLinkFrameName',
   };
 
   String _guiStr(String key, String defaultValue) {
@@ -341,40 +345,39 @@ class Setting {
   void applyBackendGuiSettings(Map<String, dynamic> j) {
     _backendGuiStrings.clear();
     j.forEach((k, v) {
-      if (v is String) {
-        _backendGuiStrings[k] = v;
-      }
+      if (v == null || v is List || v is Map) return;
+      _backendGuiStrings[k] = '$v';
     });
-    sshHost = '${j['sshHost'] ?? ''}';
-    final portRaw = j['sshPort'];
+    SSHHost = '${j['SSHHost'] ?? ''}';
+    final portRaw = j['SSHPort'];
     if (portRaw is int) {
-      sshPort = portRaw.clamp(1, 65535);
+      SSHPort = portRaw.clamp(1, 65535);
     } else if (portRaw != null) {
-      sshPort = int.tryParse('$portRaw') ?? 22;
+      SSHPort = int.tryParse('$portRaw') ?? 22;
     } else {
-      sshPort = 22;
+      SSHPort = 22;
     }
-    sshUsername = '${j['sshUsername'] ?? ''}';
-    sshPassword = '${j['sshPassword'] ?? ''}';
-    final qc = j['sshQuickCommands'];
+    SSHUsername = '${j['SSHUsername'] ?? ''}';
+    SSHPassword = '${j['SSHPassword'] ?? ''}';
+    final qc = j['SSHQuickCommands'];
     if (qc is List) {
-      sshQuickCommands = qc
+      SSHQuickCommands = qc
           .whereType<Map>()
           .map((e) => SshQuickCmd.fromJson(Map<String, dynamic>.from(e)))
           .where((e) => e.name.isNotEmpty && e.cmd.isNotEmpty)
           .toList();
     } else {
-      sshQuickCommands = [];
+      SSHQuickCommands = [];
     }
   }
 
   bool get sshCredentialsConfigured =>
       robotIp.trim().isNotEmpty &&
-      sshUsername.trim().isNotEmpty &&
-      sshPassword.isNotEmpty;
+      SSHUsername.trim().isNotEmpty &&
+      SSHPassword.isNotEmpty;
 
-  List<SshQuickCmd> get effectiveSshQuickCommands =>
-      sshQuickCommands.isEmpty ? defaultSshQuickCommands() : sshQuickCommands;
+  List<SshQuickCmd> get effectiveSSHQuickCommands =>
+      SSHQuickCommands.isEmpty ? defaultSSHQuickCommands() : SSHQuickCommands;
 
   void patchBackendGuiSetting(String key, String value) {
     _backendGuiStrings[key] = value;
@@ -382,31 +385,35 @@ class Setting {
 
   Map<String, dynamic> buildBackendGuiSettingsJson() {
     return {
-      'navToPoseStatusTopic': navToPoseStatusTopic,
-      'navThroughPosesStatusTopic': navThroughPosesStatusTopic,
-      'laserTopic': laserTopic,
-      'localPathTopic': localPathTopic,
-      'globalPathTopic': globalPathTopic,
-      'tracePathTopic': tracePathTopic,
-      'OdometryTopic': odomTopic,
+      'MapPubTopic': mapPubTopic,
+      'MapSubTopic': mapSubTopic,
+      'MapManagerFrameId': mapManagerFrameId,
+      'NavToPoseStatusTopic': navToPoseStatusTopic,
+      'NavThroughPosesStatusTopic': navThroughPosesStatusTopic,
+      'LaserTopic': laserTopic,
+      'LocalPathTopic': localPathTopic,
+      'GlobalPathTopic': globalPathTopic,
+      'TracePathTopic': tracePathTopic,
+      'OdomTopic': odomTopic,
       'BatteryTopic': batteryTopic,
-      'robotFootprintTopic': robotFootprintTopic,
-      'localCostmapTopic': localCostmapTopic,
-      'pointCloud2Topic': pointCloud2Topic,
-      'diagnosticTopic': diagnosticTopic,
-      'topologyMapTopic': topologyMapTopic,
-      'topologyJsonTopic': topologyJsonTopic,
-      'topologyPublishTopic': topologyPublishTopic,
-      'relocTopic': relocTopic,
-      'navGoalTopic': navGoalTopic,
+      'RobotFootprintTopic': robotFootprintTopic,
+      'LocalCostmapTopic': localCostmapTopic,
+      'GlobalCostmapTopic': globalCostmapTopic,
+      'PointCloud2Topic': pointCloud2Topic,
+      'DiagnosticTopic': diagnosticTopic,
+      'TopologyLiveTopic': topologyMapTopic,
+      'TopologyJsonTopic': topologyJsonTopic,
+      'TopologyPublishTopic': topologyPublishTopic,
+      'RelocTopic': relocTopic,
+      'NavGoalTopic': navGoalTopic,
       'SpeedCtrlTopic': speedCtrlTopic,
-      'mapFrameName': mapFrameName,
-      'baseLinkFrameName': baseLinkFrameName,
-      'sshHost': robotIp.trim(),
-      'sshPort': sshPort,
-      'sshUsername': sshUsername,
-      'sshPassword': sshPassword,
-      'sshQuickCommands': sshQuickCommands.map((e) => e.toJson()).toList(),
+      'MapFrameName': mapFrameName,
+      'BaseLinkFrameName': baseLinkFrameName,
+      'SSHHost': robotIp.trim(),
+      'SSHPort': SSHPort,
+      'SSHUsername': SSHUsername,
+      'SSHPassword': SSHPassword,
+      'SSHQuickCommands': SSHQuickCommands.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -461,24 +468,36 @@ class Setting {
   }
 
   String get robotFootprintTopic {
-    return _guiStr('robotFootprintTopic',
+    return _guiStr('RobotFootprintTopic',
         "/local_costmap/published_footprint");
   }
 
   void setRobotFootprintTopic(String topic) {
-    _backendGuiStrings['robotFootprintTopic'] = topic;
+    _backendGuiStrings['RobotFootprintTopic'] = topic;
   }
 
   String get localCostmapTopic {
-    return _guiStr('localCostmapTopic', "/local_costmap/costmap");
+    return _guiStr('LocalCostmapTopic', "/local_costmap/costmap");
   }
 
   void setLocalCostmapTopic(String topic) {
-    _backendGuiStrings['localCostmapTopic'] = topic;
+    _backendGuiStrings['LocalCostmapTopic'] = topic;
   }
 
   String get globalCostmapTopic {
-    return _guiStr('globalCostmapTopic', "/global_costmap/costmap");
+    return _guiStr('GlobalCostmapTopic', "/global_costmap/costmap");
+  }
+
+  String get mapPubTopic {
+    return _guiStr('MapPubTopic', "/map_manager/map");
+  }
+
+  String get mapSubTopic {
+    return _guiStr('MapSubTopic', "/map");
+  }
+
+  String get mapManagerFrameId {
+    return _guiStr('MapManagerFrameId', "map");
   }
 
   void setMapTopic(String topic) {
@@ -490,84 +509,84 @@ class Setting {
   }
 
   String get topologyMapTopic {
-    return _guiStr('topologyMapTopic', "/map/topology");
+    return _guiStr('TopologyLiveTopic', "/map/topology");
   }
 
   String get topologyJsonTopic {
-    return _guiStr('topologyJsonTopic', '');
+    return _guiStr('TopologyJsonTopic', '');
   }
 
   String get topologyPublishTopic {
-    return _guiStr('topologyPublishTopic', "/map/topology/update");
+    return _guiStr('TopologyPublishTopic', "/map/topology/update");
   }
 
   String get navToPoseStatusTopic {
-    return _guiStr('navToPoseStatusTopic', "navigate_to_pose/_action/status");
+    return _guiStr('NavToPoseStatusTopic', "navigate_to_pose/_action/status");
   }
 
   String get navThroughPosesStatusTopic {
-    return _guiStr('navThroughPosesStatusTopic',
+    return _guiStr('NavThroughPosesStatusTopic',
         "navigate_through_poses/_action/status");
   }
 
   void setLaserTopic(String topic) {
-    _backendGuiStrings['laserTopic'] = topic;
+    _backendGuiStrings['LaserTopic'] = topic;
   }
 
   String get laserTopic {
-    return _guiStr('laserTopic', "scan");
+    return _guiStr('LaserTopic', "scan");
   }
 
   void setPointCloud2Topic(String topic) {
-    _backendGuiStrings['pointCloud2Topic'] = topic;
+    _backendGuiStrings['PointCloud2Topic'] = topic;
   }
 
   String get pointCloud2Topic {
-    return _guiStr('pointCloud2Topic', "points");
+    return _guiStr('PointCloud2Topic', "points");
   }
 
   void setGloalPathTopic(String topic) {
-    _backendGuiStrings['globalPathTopic'] = topic;
+    _backendGuiStrings['GlobalPathTopic'] = topic;
   }
 
   String get globalPathTopic {
-    return _guiStr('globalPathTopic', "/plan");
+    return _guiStr('GlobalPathTopic', "/plan");
   }
 
   String get tracePathTopic {
-    return _guiStr('tracePathTopic', "/transformed_global_plan");
+    return _guiStr('TracePathTopic', "/transformed_global_plan");
   }
 
   void setLocalPathTopic(String topic) {
-    _backendGuiStrings['localPathTopic'] = topic;
+    _backendGuiStrings['LocalPathTopic'] = topic;
   }
 
   String get localPathTopic {
-    return _guiStr('localPathTopic', "/local_plan");
+    return _guiStr('LocalPathTopic', "/local_plan");
   }
 
   void setRelocTopic(String topic) {
-    _backendGuiStrings['relocTopic'] = topic;
+    _backendGuiStrings['RelocTopic'] = topic;
   }
 
   String get relocTopic {
-    return _guiStr('relocTopic', "/initialpose");
+    return _guiStr('RelocTopic', "/initialpose");
   }
 
   String get mapFrameName {
-    return _guiStr('mapFrameName', "map");
+    return _guiStr('MapFrameName', "map");
   }
 
   String get baseLinkFrameName {
-    return _guiStr('baseLinkFrameName', "base_link");
+    return _guiStr('BaseLinkFrameName', "base_link");
   }
 
   String get navGoalTopic {
-    return _guiStr('navGoalTopic', "/goal_pose");
+    return _guiStr('NavGoalTopic', "/goal_pose");
   }
 
   void setNavGoalTopic(String topic) {
-    _backendGuiStrings['navGoalTopic'] = topic;
+    _backendGuiStrings['NavGoalTopic'] = topic;
   }
 
   String get batteryTopic {
@@ -579,11 +598,11 @@ class Setting {
   }
 
   String get diagnosticTopic {
-    return _guiStr('diagnosticTopic', "/diagnostics");
+    return _guiStr('DiagnosticTopic', "/diagnostics");
   }
 
   void setDiagnosticTopic(String topic) {
-    _backendGuiStrings['diagnosticTopic'] = topic;
+    _backendGuiStrings['DiagnosticTopic'] = topic;
   }
 
   String getConfig(String key) {
@@ -591,11 +610,11 @@ class Setting {
   }
 
   String get odomTopic {
-    return _guiStr('OdometryTopic', "/wheel/odometry");
+    return _guiStr('OdomTopic', "/wheel/odometry");
   }
 
   void setOdomTopic(String topic) {
-    _backendGuiStrings['OdometryTopic'] = topic;
+    _backendGuiStrings['OdomTopic'] = topic;
   }
 
   void setSpeedCtrlTopic(String topic) {
@@ -659,11 +678,11 @@ class Setting {
 
   // 添加框架名称设置方法
   void setMapFrameName(String name) {
-    _backendGuiStrings['mapFrameName'] = name;
+    _backendGuiStrings['MapFrameName'] = name;
   }
 
   void setBaseLinkFrameName(String name) {
-    _backendGuiStrings['baseLinkFrameName'] = name;
+    _backendGuiStrings['BaseLinkFrameName'] = name;
   }
 
   // 添加通用配置设置方法
@@ -718,15 +737,15 @@ class Setting {
   }
 
   void setGlobalCostmapTopic(String topic) {
-    _backendGuiStrings['globalCostmapTopic'] = topic;
+    _backendGuiStrings['GlobalCostmapTopic'] = topic;
   }
 
   void setGlobalPathTopic(String topic) {
-    _backendGuiStrings['globalPathTopic'] = topic;
+    _backendGuiStrings['GlobalPathTopic'] = topic;
   }
 
   void setTracePathTopic(String topic) {
-    _backendGuiStrings['tracePathTopic'] = topic;
+    _backendGuiStrings['TracePathTopic'] = topic;
   }
   // 状态监控相关方法
   void setRobotStatusTopic(String topic) {

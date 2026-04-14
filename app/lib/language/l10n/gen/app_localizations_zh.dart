@@ -171,6 +171,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get global_costmap_topic => '全局代价地图话题';
 
   @override
+  String get backend_setting => '后端设置';
+
+  @override
+  String get map_publish_topic => '地图发布话题';
+
+  @override
+  String get map_subscribe_topic => '地图订阅话题';
+
+  @override
+  String get map_manager_frame => '地图管理坐标系';
+
+  @override
+  String get nav_to_pose_status_topic => '单点导航状态话题';
+
+  @override
+  String get nav_through_poses_status_topic => '多点导航状态话题';
+
+  @override
+  String get topology_live_topic => '拓扑实时话题';
+
+  @override
+  String get topology_json_topic => '拓扑JSON话题';
+
+  @override
+  String get topology_publish_topic => '拓扑发布话题';
+
+  @override
+  String get diagnostic_topic_label => '诊断话题';
+
+  @override
   String get robot_size => '机器人图标尺寸';
 
   @override

@@ -105,8 +105,6 @@ bool ResolveImageTopic(rclcpp::Node& node, const std::string& request_topic, std
   return true;
 }
 
-constexpr const char* kPubMapTopic = "/map_manager/map";
-constexpr const char* kSubMapTopic = "/map";
 constexpr double kSaveMapTimeoutSec = 2.0;
 constexpr double kFreeThreshDefault = 0.25;
 constexpr double kOccupiedThreshDefault = 0.65;
@@ -134,12 +132,12 @@ void RosGuiNode::PublishMapUpdate() {
   }
 }
 
-bool RosGuiNode::Init(const GuiAppSettings& gui_app) {
-  gui_settings_ = gui_app;
+bool RosGuiNode::Init(const AppConfig& app_config) {
+  gui_settings_ = app_config;
   MapManager::Instance()->SetOnMapUpdateCallback([this]() { PublishMapUpdate(); });
 
-  const std::string pub_topic = kPubMapTopic;
-  const std::string sub_topic = kSubMapTopic;
+  const std::string pub_topic = NormalizeTopicName(gui_settings_.MapPubTopic);
+  const std::string sub_topic = NormalizeTopicName(gui_settings_.MapSubTopic);
 
   const std::string prefix = get_name() + std::string("/");
   get_map_service_ = create_service<nav_msgs::srv::GetMap>(
@@ -152,10 +150,13 @@ bool RosGuiNode::Init(const GuiAppSettings& gui_app) {
   occ_pub_ = create_publisher<OccGridPubAdaptedType>(
       pub_topic, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
 
+  rclcpp::SubscriptionOptions occ_sub_opts;
+  occ_sub_opts.ignore_local_publications = true;
   raw_occ_map_sub_ = create_subscription<OccGridDataAdaptedType>(
       sub_topic,
       rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable(),
-      std::bind(&RosGuiNode::RawOccMapUpdateCallback, this, _1));
+      std::bind(&RosGuiNode::RawOccMapUpdateCallback, this, _1),
+      occ_sub_opts);
 
   image_callback_group_ =
       create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, true);

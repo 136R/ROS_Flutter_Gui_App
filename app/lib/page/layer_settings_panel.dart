@@ -1,37 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ros_flutter_gui_app/basic/layer_config.dart';
-import 'package:ros_flutter_gui_app/global/setting.dart';
 import 'package:ros_flutter_gui_app/language/l10n/gen/app_localizations.dart';
 import 'package:ros_flutter_gui_app/provider/global_state.dart';
-import 'package:ros_flutter_gui_app/provider/http_channel.dart';
-
-Future<void> saveGuiTopicToBackend(
-    BuildContext context, String key, String raw) async {
-  if (!Setting.backendGuiStorageKeys.contains(key)) return;
-  final trimmed = raw.trim();
-  try {
-    await HttpChannel().saveGuiSettings({key: trimmed});
-    globalSetting.patchBackendGuiSetting(key, trimmed);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.config_saved),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$e'),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-}
 
 Future<Color?> pickPresetColor(BuildContext context, Color current) async {
   const presets = <Color>[
@@ -95,13 +66,6 @@ class LayerSettingsPanel extends StatefulWidget {
 }
 
 class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
-  late final TextEditingController _laserTopic;
-  late final TextEditingController _globalPathTopic;
-  late final TextEditingController _localPathTopic;
-  late final TextEditingController _tracePathTopic;
-  late final TextEditingController _pointCloudTopic;
-  late final TextEditingController _localCostTopic;
-  late final TextEditingController _footprintTopic;
   late double _laserDotDraft;
 
   final Set<String> _openLayerIds = <String>{};
@@ -113,31 +77,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
     super.initState();
     _laserDotDraft = Provider.of<GlobalState>(context, listen: false)
         .layerLaserDotRadius();
-    _laserTopic = TextEditingController(text: globalSetting.laserTopic);
-    _globalPathTopic =
-        TextEditingController(text: globalSetting.globalPathTopic);
-    _localPathTopic =
-        TextEditingController(text: globalSetting.localPathTopic);
-    _tracePathTopic =
-        TextEditingController(text: globalSetting.tracePathTopic);
-    _pointCloudTopic =
-        TextEditingController(text: globalSetting.pointCloud2Topic);
-    _localCostTopic =
-        TextEditingController(text: globalSetting.localCostmapTopic);
-    _footprintTopic =
-        TextEditingController(text: globalSetting.robotFootprintTopic);
-  }
-
-  @override
-  void dispose() {
-    _laserTopic.dispose();
-    _globalPathTopic.dispose();
-    _localPathTopic.dispose();
-    _tracePathTopic.dispose();
-    _pointCloudTopic.dispose();
-    _localCostTopic.dispose();
-    _footprintTopic.dispose();
-    super.dispose();
   }
 
   void _toggleOpen(String id) {
@@ -230,46 +169,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
     );
   }
 
-  Widget _buildTopicField(
-    BuildContext context, {
-    required String label,
-    required TextEditingController ctrl,
-    required String backendKey,
-  }) {
-    return _groupRowBorder(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: ctrl,
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
-                decoration: InputDecoration(
-                  labelText: label,
-                  isDense: true,
-                  border: InputBorder.none,
-                  labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                  floatingLabelBehavior: FloatingLabelBehavior.auto,
-                ),
-                onSubmitted: (t) =>
-                    saveGuiTopicToBackend(context, backendKey, t),
-              ),
-            ),
-            IconButton(
-              tooltip: AppLocalizations.of(context)!.save,
-              icon: const Icon(Icons.check_circle_outline, size: 22),
-              color: Theme.of(context).colorScheme.primary,
-              onPressed: () =>
-                  saveGuiTopicToBackend(context, backendKey, ctrl.text),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildColorRow(
     BuildContext context,
     GlobalState gs,
@@ -335,12 +234,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
             title: l10n.layer_local_costmap,
             layerKey: 'localCostmap'),
         if (_openLayerIds.contains('lcost')) ...[
-          _buildTopicField(
-            context,
-            label: l10n.local_cost_map_topic,
-            ctrl: _localCostTopic,
-            backendKey: 'localCostmapTopic',
-          ),
           Consumer<GlobalState>(
             builder: (ctx, gs, __) {
               final cfg = gs.layerConfig['localCostmap'];
@@ -428,25 +321,12 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
               ),
             ),
           ),
-          _buildTopicField(
-            context,
-            label: l10n.laser_topic,
-            ctrl: _laserTopic,
-            backendKey: 'laserTopic',
-          ),
         ],
         _buildLayerHeader(context,
             id: 'pc',
             title: l10n.layer_pointcloud,
             layerKey: 'pointCloud'),
-        if (_openLayerIds.contains('pc')) ...[
-          _buildTopicField(
-            context,
-            label: l10n.pointcloud2_topic,
-            ctrl: _pointCloudTopic,
-            backendKey: 'pointCloud2Topic',
-          ),
-        ],
+        if (_openLayerIds.contains('pc')) ...[],
         _buildLayerHeader(context,
             id: 'gpath',
             title: l10n.layer_global_path,
@@ -454,12 +334,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
         if (_openLayerIds.contains('gpath')) ...[
           _buildColorRow(context, gs, l10n.layer_color, 'globalPath',
               const Color(0xFF2196F3)),
-          _buildTopicField(
-            context,
-            label: l10n.global_path_topic,
-            ctrl: _globalPathTopic,
-            backendKey: 'globalPathTopic',
-          ),
         ],
         _buildLayerHeader(context,
             id: 'lpath',
@@ -468,12 +342,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
         if (_openLayerIds.contains('lpath')) ...[
           _buildColorRow(
               context, gs, l10n.layer_color, 'localPath', Colors.green),
-          _buildTopicField(
-            context,
-            label: l10n.local_path_topic,
-            ctrl: _localPathTopic,
-            backendKey: 'localPathTopic',
-          ),
         ],
         _buildLayerHeader(context,
             id: 'tpath',
@@ -482,12 +350,6 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
         if (_openLayerIds.contains('tpath')) ...[
           _buildColorRow(
               context, gs, l10n.layer_color, 'tracePath', Colors.yellow),
-          _buildTopicField(
-            context,
-            label: l10n.trace_path_topic,
-            ctrl: _tracePathTopic,
-            backendKey: 'tracePathTopic',
-          ),
         ],
         _buildLayerHeader(context,
             id: 'topo',
@@ -497,14 +359,7 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
             id: 'foot',
             title: l10n.layer_robot_footprint,
             layerKey: 'robotFootprint'),
-        if (_openLayerIds.contains('foot')) ...[
-          _buildTopicField(
-            context,
-            label: l10n.robot_footprint_topic,
-            ctrl: _footprintTopic,
-            backendKey: 'robotFootprintTopic',
-          ),
-        ],
+        if (_openLayerIds.contains('foot')) ...[],
       ],
     );
   }

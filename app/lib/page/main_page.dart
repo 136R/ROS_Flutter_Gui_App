@@ -187,14 +187,14 @@ class _MainFlamePageState extends State<MainFlamePage> {
     return globalSetting.sshCredentialsConfigured;
   }
 
-  Future<void> _openSshQuickCommands(BuildContext context) async {
+  Future<void> _openSSHQuickCommands(BuildContext context) async {
     if (!await _pullLatestGuiSettingsForSsh(context)) return;
     if (!context.mounted) return;
     if (!await _ensureSshCredentialsInteractive(context)) return;
     if (!context.mounted) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const SshQuickCommandsPage()),
+      MaterialPageRoute(builder: (context) => const SSHQuickCommandsPage()),
     );
   }
 
@@ -215,6 +215,10 @@ class _MainFlamePageState extends State<MainFlamePage> {
       '/setting',
       arguments: kSettingsRouteArgLayers,
     );
+  }
+
+  void _openSettings(BuildContext context) {
+    Navigator.pushNamed(context, '/setting');
   }
 
   // 设置诊断数据监听器
@@ -300,7 +304,6 @@ class _MainFlamePageState extends State<MainFlamePage> {
                 children: [
                   TileMap(
                     key: _tileMapKey,
-                    mapName: 'map',
                     onTap: () {
                       setState(() {
                         selectedNavPoint = null;
@@ -841,6 +844,16 @@ class _MainFlamePageState extends State<MainFlamePage> {
             theme,
             child: IconButton(
               style: tbStyle,
+              icon: Icon(Icons.settings, color: theme.iconTheme.color),
+              tooltip: l10n.setting,
+              onPressed: () => _openSettings(context),
+            ),
+          ),
+          const SizedBox(height: 6),
+          _MapToolbarShell(
+            theme,
+            child: IconButton(
+              style: tbStyle,
               icon: Icon(
                 Icons.edit_document,
                 color: (Provider.of<GlobalState>(context, listen: false)
@@ -884,7 +897,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                               style: tbStyle,
                               onPressed: () async {
                                 setState(() => _sshRailExpanded = false);
-                                await _openSshQuickCommands(context);
+                                await _openSSHQuickCommands(context);
                               },
                               icon: Icon(Icons.bolt_rounded,
                                   color: theme.iconTheme.color),

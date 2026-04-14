@@ -250,7 +250,7 @@ void RosGuiNode::SetupGuiStreamsLocked() {
   last_global_costmap_push_ = std::chrono::steady_clock::time_point{};
 }
 
-bool RosGuiNode::ReloadGuiStreams(const GuiAppSettings& settings) {
+bool RosGuiNode::ReloadGuiStreams(const AppConfig& settings) {
   std::lock_guard<std::mutex> lk(stream_mu_);
   gui_settings_ = settings;
   ClearGuiStreamsLocked();

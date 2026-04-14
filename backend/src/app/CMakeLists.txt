@@ -19,7 +19,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE
   robot_stream
   ros_gui_node
   Boost::filesystem
-  yaml-cpp::yaml-cpp
+  Boost::program_options
 )
 
 install(TARGETS ${TARGET_NAME} DESTINATION bin)

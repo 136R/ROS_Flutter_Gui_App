@@ -5,9 +5,9 @@ import 'package:ros_flutter_gui_app/provider/http_channel.dart';
 
 Future<void> ShowSshConfigSheet(BuildContext parentContext) async {
   final l10n = AppLocalizations.of(parentContext)!;
-  final portCtrl = TextEditingController(text: '${globalSetting.sshPort}');
-  final userCtrl = TextEditingController(text: globalSetting.sshUsername);
-  final passCtrl = TextEditingController(text: globalSetting.sshPassword);
+  final portCtrl = TextEditingController(text: '${globalSetting.SSHPort}');
+  final userCtrl = TextEditingController(text: globalSetting.SSHUsername);
+  final passCtrl = TextEditingController(text: globalSetting.SSHPassword);
   final robotIp = globalSetting.robotIp.trim();
 
   final ok = await showModalBottomSheet<bool>(
@@ -66,12 +66,12 @@ Future<void> ShowSshConfigSheet(BuildContext parentContext) async {
               onPressed: () async {
                 final port = int.tryParse(portCtrl.text.trim()) ?? 22;
                 final body = globalSetting.buildBackendGuiSettingsJson();
-                body['sshHost'] = robotIp;
-                body['sshPort'] = port.clamp(1, 65535);
-                body['sshUsername'] = userCtrl.text.trim();
-                body['sshPassword'] = passCtrl.text;
-                body['sshQuickCommands'] =
-                    globalSetting.sshQuickCommands.map((e) => e.toJson()).toList();
+                body['SSHHost'] = robotIp;
+                body['SSHPort'] = port.clamp(1, 65535);
+                body['SSHUsername'] = userCtrl.text.trim();
+                body['SSHPassword'] = passCtrl.text;
+                body['SSHQuickCommands'] =
+                    globalSetting.SSHQuickCommands.map((e) => e.toJson()).toList();
                 try {
                   await HttpChannel().saveGuiSettings(body);
                   globalSetting.applyBackendGuiSettings(body);

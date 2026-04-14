@@ -275,8 +275,8 @@ class _SshTerminalPageState extends State<SshTerminalPage> {
     });
     try {
       final client = await sshConnect(
-        username: globalSetting.sshUsername.trim(),
-        password: globalSetting.sshPassword,
+        username: globalSetting.SSHUsername.trim(),
+        password: globalSetting.SSHPassword,
       );
       final session = await sshStartShell(client);
       _client = client;

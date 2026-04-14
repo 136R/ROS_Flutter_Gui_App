@@ -138,28 +138,41 @@ class _SettingsPageState extends State<SettingsPage> {
       'robotPort': AppLocalizations.of(context)!.port,
       'httpServerPort': AppLocalizations.of(context)!.http_server_port,
       'mapTopic': AppLocalizations.of(context)!.map_topic,
-      'laserTopic': AppLocalizations.of(context)!.laser_topic,
-      'globalPathTopic': AppLocalizations.of(context)!.global_path_topic,
-      'localPathTopic': AppLocalizations.of(context)!.local_path_topic,
-      'tracePathTopic': AppLocalizations.of(context)!.trace_path_topic,
-      'relocTopic': AppLocalizations.of(context)!.reloc_topic,
-      'navGoalTopic': AppLocalizations.of(context)!.nav_goal_topic,
-      'OdometryTopic': AppLocalizations.of(context)!.odometry_topic,
+      'LaserTopic': AppLocalizations.of(context)!.laser_topic,
+      'GlobalPathTopic': AppLocalizations.of(context)!.global_path_topic,
+      'LocalPathTopic': AppLocalizations.of(context)!.local_path_topic,
+      'TracePathTopic': AppLocalizations.of(context)!.trace_path_topic,
+      'RelocTopic': AppLocalizations.of(context)!.reloc_topic,
+      'NavGoalTopic': AppLocalizations.of(context)!.nav_goal_topic,
+      'OdomTopic': AppLocalizations.of(context)!.odometry_topic,
       'SpeedCtrlTopic': AppLocalizations.of(context)!.speed_ctrl_topic,
       'BatteryTopic': AppLocalizations.of(context)!.battery_topic,
       'MaxVx': AppLocalizations.of(context)!.max_speed,
       'MaxVy': AppLocalizations.of(context)!.max_y_speed,
       'MaxVw': AppLocalizations.of(context)!.max_angular_speed,
-      'mapFrameName': AppLocalizations.of(context)!.map_frame,
-      'baseLinkFrameName': AppLocalizations.of(context)!.base_frame,
+      'MapFrameName': AppLocalizations.of(context)!.map_frame,
+      'BaseLinkFrameName': AppLocalizations.of(context)!.base_frame,
       'imagePort': AppLocalizations.of(context)!.image_port,
       'imageTopic': AppLocalizations.of(context)!.image_topic,
       'imageWidth': AppLocalizations.of(context)!.image_width,
       'imageHeight': AppLocalizations.of(context)!.image_height,
-      'robotFootprintTopic': AppLocalizations.of(context)!.robot_footprint_topic,
-      'localCostmapTopic': AppLocalizations.of(context)!.local_cost_map_topic,
-      'pointCloud2Topic': AppLocalizations.of(context)!.pointcloud2_topic,
+      'RobotFootprintTopic': AppLocalizations.of(context)!.robot_footprint_topic,
+      'LocalCostmapTopic': AppLocalizations.of(context)!.local_cost_map_topic,
+      'PointCloud2Topic': AppLocalizations.of(context)!.pointcloud2_topic,
       'robotSize': AppLocalizations.of(context)!.robot_size,
+      'MapPubTopic': AppLocalizations.of(context)!.map_publish_topic,
+      'MapSubTopic': AppLocalizations.of(context)!.map_subscribe_topic,
+      'MapManagerFrameId': AppLocalizations.of(context)!.map_manager_frame,
+      'GlobalCostmapTopic': AppLocalizations.of(context)!.global_costmap_topic,
+      'NavToPoseStatusTopic':
+          AppLocalizations.of(context)!.nav_to_pose_status_topic,
+      'NavThroughPosesStatusTopic':
+          AppLocalizations.of(context)!.nav_through_poses_status_topic,
+      'TopologyLiveTopic': AppLocalizations.of(context)!.topology_live_topic,
+      'TopologyJsonTopic': AppLocalizations.of(context)!.topology_json_topic,
+      'TopologyPublishTopic':
+          AppLocalizations.of(context)!.topology_publish_topic,
+      'DiagnosticTopic': AppLocalizations.of(context)!.diagnostic_topic_label,
     };
     return displayNames[key] ?? key;
   }
@@ -263,9 +276,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _buildLanguageSection(),
       _buildTempConfigTypeSection(),
       _buildBasicSection(),
-      _buildSshSection(),
+      _buildBackendSettingsSection(),
       _buildLayersSection(),
-      _buildOtherTopicsSection(),
       _buildOrientationSection(),
       // ... 其他设置组
     ];
@@ -315,29 +327,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveLanguage(String language) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', language);
-  }
-
-  Widget _buildSshSection() {
-    final l10n = AppLocalizations.of(context)!;
-    return _buildSection(
-      l10n.ssh_remote_section,
-      [
-        ListTile(
-          title: Text(l10n.ssh_config_list_tile_title),
-          subtitle: Text(
-            globalSetting.sshCredentialsConfigured
-                ? l10n.ssh_user_at_host_port(
-                    globalSetting.sshUsername.trim(),
-                    globalSetting.robotIp.trim(),
-                    globalSetting.sshPort,
-                  )
-                : l10n.ssh_not_configured_hint,
-          ),
-          trailing: const Icon(Icons.keyboard_arrow_right),
-          onTap: () => ShowSshConfigSheet(context),
-        ),
-      ],
-    );
   }
 
   Widget _buildTempConfigTypeSection() {
@@ -505,14 +494,58 @@ class _SettingsPageState extends State<SettingsPage> {
         _buildSettingItem('MaxVy', _settings['MaxVy'] ?? '0.1'),
         _buildSettingItem('MaxVw', _settings['MaxVw'] ?? '0.3'),
         _buildSettingItem('robotSize', _settings['robotSize']?.toString() ?? '3.0'),
-        _buildSettingItem('mapFrameName', globalSetting.mapFrameName),
-        _buildSettingItem(
-            'baseLinkFrameName', globalSetting.baseLinkFrameName),
         _buildSettingItem('imagePort', _settings['imagePort'] ?? '8080'),
         _buildSettingItem(
             'imageWidth', _settings['imageWidth']?.toString() ?? '640'),
         _buildSettingItem(
             'imageHeight', _settings['imageHeight']?.toString() ?? '480'),
+      ],
+    );
+  }
+
+  Widget _buildBackendSettingsSection() {
+    final l10n = AppLocalizations.of(context)!;
+    return _buildSection(
+      l10n.backend_setting,
+      [
+        ListTile(
+          title: Text(l10n.ssh_config_list_tile_title),
+          subtitle: Text(
+            globalSetting.sshCredentialsConfigured
+                ? l10n.ssh_user_at_host_port(
+                    globalSetting.SSHUsername.trim(),
+                    globalSetting.robotIp.trim(),
+                    globalSetting.SSHPort,
+                  )
+                : l10n.ssh_not_configured_hint,
+          ),
+          trailing: const Icon(Icons.keyboard_arrow_right),
+          onTap: () => ShowSshConfigSheet(context),
+        ),
+        _buildSettingItem('MapFrameName', globalSetting.mapFrameName),
+        _buildSettingItem('BaseLinkFrameName', globalSetting.baseLinkFrameName),
+        _buildSettingItem('MapPubTopic', globalSetting.mapPubTopic),
+        _buildSettingItem('MapSubTopic', globalSetting.mapSubTopic),
+        _buildSettingItem('MapManagerFrameId', globalSetting.mapManagerFrameId),
+        _buildSettingItem('RelocTopic', globalSetting.relocTopic),
+        _buildSettingItem('NavGoalTopic', globalSetting.navGoalTopic),
+        _buildSettingItem('OdomTopic', globalSetting.odomTopic),
+        _buildSettingItem('SpeedCtrlTopic', globalSetting.speedCtrlTopic),
+        _buildSettingItem('BatteryTopic', globalSetting.batteryTopic),
+        _buildSettingItem('GlobalCostmapTopic', globalSetting.globalCostmapTopic),
+        _buildSettingItem('RobotFootprintTopic', globalSetting.robotFootprintTopic),
+        _buildSettingItem('LocalCostmapTopic', globalSetting.localCostmapTopic),
+        _buildSettingItem('PointCloud2Topic', globalSetting.pointCloud2Topic),
+        _buildSettingItem('DiagnosticTopic', globalSetting.diagnosticTopic),
+        _buildSettingItem('GlobalPathTopic', globalSetting.globalPathTopic),
+        _buildSettingItem('LocalPathTopic', globalSetting.localPathTopic),
+        _buildSettingItem('TracePathTopic', globalSetting.tracePathTopic),
+        _buildSettingItem('TopologyLiveTopic', globalSetting.topologyMapTopic),
+        _buildSettingItem('TopologyJsonTopic', globalSetting.topologyJsonTopic),
+        _buildSettingItem('TopologyPublishTopic', globalSetting.topologyPublishTopic),
+        _buildSettingItem('NavToPoseStatusTopic', globalSetting.navToPoseStatusTopic),
+        _buildSettingItem('NavThroughPosesStatusTopic', globalSetting.navThroughPosesStatusTopic),
+        _buildSettingItem('LaserTopic', globalSetting.laserTopic),
       ],
     );
   }
@@ -543,22 +576,6 @@ class _SettingsPageState extends State<SettingsPage> {
           clipBehavior: Clip.antiAlias,
           child: const LayerSettingsPanel(),
         ),
-      ],
-    );
-  }
-
-  Widget _buildOtherTopicsSection() {
-    return _buildSection(
-      AppLocalizations.of(context)!.topic_setting,
-      [
-        _buildSettingItem('mapTopic', _settings['mapTopic'] ?? 'map'),
-        _buildSettingItem('relocTopic', globalSetting.relocTopic),
-        _buildSettingItem('navGoalTopic', globalSetting.navGoalTopic),
-        _buildSettingItem('OdometryTopic', globalSetting.odomTopic),
-        _buildSettingItem('SpeedCtrlTopic', globalSetting.speedCtrlTopic),
-        _buildSettingItem('BatteryTopic', globalSetting.batteryTopic),
-        _buildSettingItem(
-            'imageTopic', _settings['imageTopic'] ?? '/image_raw'),
       ],
     );
   }

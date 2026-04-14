@@ -78,8 +78,8 @@ You **do not** need a separate **rosbridge** setup for this flow; older rosbridg
 
 Same backend **HTTP host/port** as the map and teleop stack. SSH is **not** raw browser TCP:
 
-1. **Connect**: After filling IP/port on the connect screen, **SSH tunnel target matches the current robot IP** (`sshHost` in sync with `robotIp` on the server).
-2. **Tunnel**: Client opens **`/ws/ssh`** over `ws` / `wss` (use `wss` when the page is HTTPS); backend opens **TCP** to `sshHost:sshPort` from `gui_app_settings.json` (usually remote `sshd`). Configure **port, SSH user, password** under **Settings → SSH** and save to the backend.
+1. **Connect**: After filling IP/port on the connect screen, **SSH tunnel target matches the current robot IP** (`SSHHost` in sync with `robotIp` on the server).
+2. **Tunnel**: Client opens **`/ws/ssh`** over `ws` / `wss` (use `wss` when the page is HTTPS); backend opens **TCP** to `SSHHost:SSHPort` from `gui_app_settings.json` (usually remote `sshd`). Configure **port, SSH user, password** under **Settings → SSH** and save to the backend.
 3. **Quick commands**: List on main UI. Each entry can enable **sudo**: remote command runs as  
    `echo '<SSH password>' | sudo -S sh -c '<command>'`  
    so the **current SSH login password** feeds `sudo -S` (user must have sudo and password must match; otherwise turn off sudo or avoid privileged commands). You can enter normal shell lines (e.g. `shutdown -h now`); a leading `sudo ` is stripped once if present.

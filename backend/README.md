@@ -63,24 +63,27 @@ cd backend/build/install/bin
 
 `start.sh` 会设置 **`LD_LIBRARY_PATH=../lib:...`** 后执行：
 
-`./ros_gui_backend --config ./cfg/config.yaml`
+`./ros_gui_backend --config-json ./gui_app_settings.json --port 8080 --document-root ./dist`
 
 ### 2.2 直接启动
 
 ```bash
 cd backend/build/install/bin
 export LD_LIBRARY_PATH=../lib:$LD_LIBRARY_PATH
-./ros_gui_backend --config /path/to/config.yaml
+./ros_gui_backend --config-json ./gui_app_settings.json --port 8080 --document-root ./dist
 ```
 
 ### 2.3 命令行参数
 
 | 参数 | 说明 |
 | --- | --- |
-| `--config <path>` | YAML 配置文件路径 |
-| `--config=<path>` | 同上 |
+| `--config-json <path>` | AppConfig JSON 配置文件路径（默认 `./gui_app_settings.json`） |
+| `--config <path>` | 兼容别名，等同于 `--config-json` |
+| `--port <1-65535>` | HTTP 服务端口（默认 `8080`） |
+| `--document-root <path>` | 静态资源目录（未指定时默认 `<executable_dir>/dist`） |
 
-未指定 **`--config`** 时，不读文件，**`MapManager`**、**`NodeConfig`**、**`WebServerConfig`** 使用代码内建默认值（例如 HTTP **8080**，发布 **`/map_manager/map`**，订阅 **`/map`** 等，与示例 `cfg/config.yaml` 一致）。
+未指定 **`--config-json`** 时，默认读取当前目录下的 **`gui_app_settings.json`**。  
+`--port` 和 `--document-root` 由命令行参数决定，不再由 JSON 配置管理。
 
 ---
 
@@ -111,7 +114,7 @@ main.cpp
 
 ---
 
-## 4. 数据目录约定
+## 4. 地图数据目录约定
 
 ```
 ~/.maps/
@@ -125,9 +128,9 @@ main.cpp
 └── ...
 ```
 
-已安装地图目录需存在 **`<地图名>/<地图名>.yaml`**。
+实际启动时，后端程序会订阅/map话题存放至~/.maps/map，当用户在前端切换地图时，后端会将当前切换后的新地图发送至/map话题
 
-GUI 话题等运行时偏好另存为 **`gui_app_settings.json`**（路径由 `Application` 与 `Config` 解析，默认可为当前工作目录下该文件）。
+
 
 ---
 

@@ -2,7 +2,6 @@
 
 #include "common/macros.h"
 #include "core/map/json.hpp"
-#include "node/node_config.hpp"
 
 #include <string>
 #include <utility>
@@ -16,7 +15,10 @@ struct SshQuickCommandEntry {
   bool use_sudo = false;
 };
 
-struct GuiAppSettings {
+struct AppConfig {
+  std::string MapManagerFrameId{"map"};
+  std::string MapPubTopic{"/map"};
+  std::string MapSubTopic{"/map"};
   std::string NavToPoseStatusTopic{"/navigate_to_pose/_action/status"};
   std::string NavThroughPosesStatusTopic{"/navigate_through_poses/_action/status"};
   std::string LaserTopic{"/scan"};
@@ -38,38 +40,35 @@ struct GuiAppSettings {
   std::string TopologyLiveTopic{"/map/topology"};
   std::string TopologyJsonTopic{};
   std::string TopologyPublishTopic{"/map/topology/update"};
-  std::string SshHost;
-  int SshPort = 22;
-  std::string SshUsername;
-  std::string SshPassword;
-  std::vector<SshQuickCommandEntry> SshQuickCommands;
+  std::string SSHHost;
+  int SSHPort = 22;
+  std::string SSHUsername;
+  std::string SSHPassword;
+  std::vector<SshQuickCommandEntry> SSHQuickCommands;
 };
 
-void GuiAppSettingsToJson(const GuiAppSettings& s, nlohmann::json* out);
-void GuiAppSettingsMergeJson(const nlohmann::json& j, GuiAppSettings* s);
-void MergeNodeConfigIntoGuiSettings(const NodeConfig& c, GuiAppSettings* g);
+void AppConfigToJson(const AppConfig& s, nlohmann::json* out);
+void AppConfigMergeJson(const nlohmann::json& j, AppConfig* s);
 
-void SetGuiAppSettingsStoragePath(std::string path);
-std::string ResolvedGuiAppSettingsPath();
+void SetAppConfigStoragePath(std::string path);
+std::string ResolvedAppConfigPath();
 
-bool LoadGuiAppSettingsFile(GuiAppSettings* s);
-bool SaveGuiAppSettingsFile(const GuiAppSettings& s);
+bool LoadAppConfigFile(AppConfig* s);
+bool SaveAppConfigFile(const AppConfig& s);
 
-class Config {
+class RootConfig {
  public:
   void SetStoragePath(std::string path);
   std::string ResolvedStoragePath() const;
 
-  const GuiAppSettings& GuiApp() const { return gui_app_; }
-  GuiAppSettings& MutableGuiApp() { return gui_app_; }
-
-  bool ResetGuiAppFromYamlAndFile(const NodeConfig& yaml);
+  const AppConfig& App() const { return app_config_; }
+  AppConfig& MutableApp() { return app_config_; }
 
  private:
   std::string storage_path_;
-  GuiAppSettings gui_app_;
+  AppConfig app_config_;
 
-  DEFINE_SINGLETON(Config)
+  DEFINE_SINGLETON(RootConfig)
 };
 
 }  // namespace ros_gui_backend

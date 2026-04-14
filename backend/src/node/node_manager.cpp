@@ -18,7 +18,7 @@ bool NodeManager::InitNode() {
     return false;
   }
   auto n = std::make_shared<RosGuiNode>();
-  if (!n->Init(Config::Instance()->GuiApp())) {
+  if (!n->Init(RootConfig::Instance()->App())) {
     return false;
   }
   node_ = std::move(n);

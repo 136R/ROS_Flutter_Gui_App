@@ -6,61 +6,26 @@
 #include "common/logger/logger.h"
 #include "node/node_manager.hpp"
 
-#include "yaml-cpp/yaml.h"
-
+#include <boost/program_options.hpp>
 #include <cstring>
 #include <filesystem>
-
-
-
 namespace ros_gui_backend {
 
 namespace {
 
-void YamlString(const YAML::Node& n, const char* key, std::string* dst) {
-  if (n[key]) {
-    *dst = n[key].as<std::string>();
-  }
-}
+namespace bpo = boost::program_options;
 
-void FillSettingsFromYaml(const YAML::Node& root, AppYamlSettings* out) {
-  if (root["map_manager"]) {
-    const YAML::Node m = root["map_manager"];
-    if (m["frame_id"]) {
-      out->map_manager.frame_id = m["frame_id"].as<std::string>();
-    }
-  }
-  if (root["ros_gui_node"]) {
-    const YAML::Node n = root["ros_gui_node"];
-    YamlString(n, "map_frame", &out->ros_gui_node.map_frame);
-    YamlString(n, "base_link_frame", &out->ros_gui_node.base_link_frame);
-    YamlString(n, "laser_topic", &out->ros_gui_node.laser_topic);
-    YamlString(n, "pointcloud_topic", &out->ros_gui_node.pointcloud_topic);
-    YamlString(n, "global_path_topic", &out->ros_gui_node.global_path_topic);
-    YamlString(n, "local_path_topic", &out->ros_gui_node.local_path_topic);
-    YamlString(n, "trace_path_topic", &out->ros_gui_node.trace_path_topic);
-    YamlString(n, "odom_topic", &out->ros_gui_node.odom_topic);
-    YamlString(n, "battery_topic", &out->ros_gui_node.battery_topic);
-    YamlString(n, "robot_footprint_topic", &out->ros_gui_node.robot_footprint_topic);
-    YamlString(n, "local_costmap_topic", &out->ros_gui_node.local_costmap_topic);
-    YamlString(n, "global_costmap_topic", &out->ros_gui_node.global_costmap_topic);
-    YamlString(n, "diagnostic_topic", &out->ros_gui_node.diagnostic_topic);
-    YamlString(n, "topology_topic", &out->ros_gui_node.topology_topic);
-    YamlString(n, "topology_json_topic", &out->ros_gui_node.topology_json_topic);
-    YamlString(n, "nav_to_pose_status_topic", &out->ros_gui_node.nav_to_pose_status_topic);
-    YamlString(n, "nav_through_poses_status_topic", &out->ros_gui_node.nav_through_poses_status_topic);
-    YamlString(n, "reloc_topic", &out->ros_gui_node.reloc_topic);
-    YamlString(n, "nav_goal_topic", &out->ros_gui_node.nav_goal_topic);
-    YamlString(n, "speed_ctrl_topic", &out->ros_gui_node.speed_ctrl_topic);
-    YamlString(n, "topology_publish_topic", &out->ros_gui_node.topology_publish_topic);
-  }
-  if (root["web_server"]) {
-    const YAML::Node w = root["web_server"];
-    if (w["port"]) {
-      out->web_server.port = w["port"].as<int>();
-    }
-    YamlString(w, "document_root", &out->web_server.document_root);
-  }
+bpo::variables_map ParseCliOptions(int argc, char** argv) {
+  bpo::options_description desc("ros_gui_backend options");
+  desc.add_options()
+      ("config-json", bpo::value<std::string>(), "config json path")
+      ("config", bpo::value<std::string>(), "compat alias of config-json")
+      ("port", bpo::value<int>(), "web server port")
+      ("document-root", bpo::value<std::string>(), "web static document root");
+  bpo::variables_map vm;
+  bpo::store(bpo::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), vm);
+  bpo::notify(vm);
+  return vm;
 }
 
 }  // namespace
@@ -74,52 +39,42 @@ Application::~Application() {
 bool Application::Initialize(int argc, char** argv) {
   argc_ = argc;
   argv_ = argv;
-  config_yaml_path_ = ParseConfigYamlPathFromArgs(argc, argv);
-  std::string err;
-  if (!LoadSettingsFromYaml(&err)) {
-    LOGGER_ERROR("Failed to load config yaml {}: {}", config_yaml_path_.empty() ? "(none)" : config_yaml_path_,
-        err);
-    return false;
-  }
+  config_json_path_ = ParseConfigJsonPathFromArgs(argc, argv);
+  web_server_port_ = ParseWebServerPortFromArgs(argc, argv);
+  web_server_document_root_ = ParseWebServerDocumentRootFromArgs(argc, argv);
   initialized_ = true;
   return true;
 }
 
-std::string Application::ParseConfigYamlPathFromArgs(int argc, char** argv) const {
-  for (int i = 1; i < argc; ++i) {
-    if (std::strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
-      return std::string(argv[++i]);
-    }
-    const char prefix[] = "--config=";
-    const size_t plen = sizeof(prefix) - 1;
-    if (std::strncmp(argv[i], prefix, plen) == 0 && argv[i][plen] != '\0') {
-      return std::string(argv[i] + plen);
-    }
+std::string Application::ParseConfigJsonPathFromArgs(int argc, char** argv) const {
+  const bpo::variables_map vm = ParseCliOptions(argc, argv);
+  if (vm.count("config-json") > 0) {
+    return vm["config-json"].as<std::string>();
+  }
+  if (vm.count("config") > 0) {
+    return vm["config"].as<std::string>();
   }
   return std::string();
 }
 
-bool Application::LoadSettingsFromYaml(std::string* error_message) {
-  settings_ = AppYamlSettings{};
-  if (config_yaml_path_.empty()) {
-    return true;
+int Application::ParseWebServerPortFromArgs(int argc, char** argv) const {
+  const bpo::variables_map vm = ParseCliOptions(argc, argv);
+  if (vm.count("port") == 0) {
+    return 8080;
   }
-  try {
-    YAML::Node root = YAML::LoadFile(config_yaml_path_);
-    if (!root.IsMap()) {
-      if (error_message) {
-        *error_message = "root must be a mapping";
-      }
-      return false;
-    }
-    FillSettingsFromYaml(root, &settings_);
-    return true;
-  } catch (const std::exception& e) {
-    if (error_message) {
-      *error_message = e.what();
-    }
-    return false;
+  const int p = vm["port"].as<int>();
+  if (p >= 1 && p <= 65535) {
+    return p;
   }
+  return 8080;
+}
+
+std::string Application::ParseWebServerDocumentRootFromArgs(int argc, char** argv) const {
+  const bpo::variables_map vm = ParseCliOptions(argc, argv);
+  if (vm.count("document-root") > 0) {
+    return vm["document-root"].as<std::string>();
+  }
+  return std::string();
 }
 
 void Application::Stop() {
@@ -136,20 +91,22 @@ int Application::Start() {
   }
   stopped_ = false;
 
+  namespace fs = std::filesystem;
+  const std::string gui_json_path =
+      config_json_path_.empty() ? (fs::current_path() / "gui_app_settings.json").string() : config_json_path_;
+  SetAppConfigStoragePath(gui_json_path);
+  RootConfig::Instance()->MutableApp() = AppConfig{};
+  if (!LoadAppConfigFile(&RootConfig::Instance()->MutableApp())) {
+    LOGGER_WARN("gui_app_settings.json invalid at {}", gui_json_path);
+  }
+  settings_ = RootConfig::Instance()->App();
+
   MapManager* mm = MapManager::Instance();
-  mm->SetFrameId(settings_.map_manager.frame_id);
+  mm->SetFrameId(settings_.MapManagerFrameId);
   if (!mm->Initialize()) {
     LOGGER_ERROR("Failed to initialize map manager");
     Stop();
     return -1;
-  }
-  namespace fs = std::filesystem;
-  const std::string gui_json_path = config_yaml_path_.empty()
-      ? (fs::current_path() / "gui_app_settings.json").string()
-      : (fs::path(config_yaml_path_).parent_path() / "gui_app_settings.json").string();
-  SetGuiAppSettingsStoragePath(gui_json_path);
-  if (!Config::Instance()->ResetGuiAppFromYamlAndFile(settings_.ros_gui_node)) {
-    LOGGER_WARN("gui_app_settings.json invalid at {}", gui_json_path);
   }
 
   if (!NodeManager::Instance()->InitNode()) {
@@ -160,7 +117,10 @@ int Application::Start() {
   WebServer::SetSigintHook([]() {  NodeManager::Instance()->GetNode()->Shutdown(); });
 
   web_server_ = std::make_unique<WebServer>();
-  if (!web_server_->Start(settings_.web_server)) {
+  WebServerConfig web_server_cfg;
+  web_server_cfg.port = web_server_port_;
+  web_server_cfg.document_root = web_server_document_root_;
+  if (!web_server_->Start(web_server_cfg)) {
     Stop();
     return -1;
   }

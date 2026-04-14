@@ -172,6 +172,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get global_costmap_topic => 'Global Cost Map Topic';
 
   @override
+  String get backend_setting => 'Backend Setting';
+
+  @override
+  String get map_publish_topic => 'Map Publish Topic';
+
+  @override
+  String get map_subscribe_topic => 'Map Subscribe Topic';
+
+  @override
+  String get map_manager_frame => 'Map Manager Frame';
+
+  @override
+  String get nav_to_pose_status_topic => 'NavToPose Status Topic';
+
+  @override
+  String get nav_through_poses_status_topic => 'NavThroughPoses Status Topic';
+
+  @override
+  String get topology_live_topic => 'Topology Live Topic';
+
+  @override
+  String get topology_json_topic => 'Topology JSON Topic';
+
+  @override
+  String get topology_publish_topic => 'Topology Publish Topic';
+
+  @override
+  String get diagnostic_topic_label => 'Diagnostic Topic';
+
+  @override
   String get robot_size => 'Robot Icon Size';
 
   @override

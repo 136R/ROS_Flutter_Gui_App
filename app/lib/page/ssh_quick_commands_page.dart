@@ -5,14 +5,14 @@ import 'package:ros_flutter_gui_app/language/l10n/gen/app_localizations.dart';
 import 'package:ros_flutter_gui_app/provider/http_channel.dart';
 import 'package:ros_flutter_gui_app/ssh/ssh_remote.dart';
 
-class SshQuickCommandsPage extends StatefulWidget {
-  const SshQuickCommandsPage({super.key});
+class SSHQuickCommandsPage extends StatefulWidget {
+  const SSHQuickCommandsPage({super.key});
 
   @override
-  State<SshQuickCommandsPage> createState() => _SshQuickCommandsPageState();
+  State<SSHQuickCommandsPage> createState() => _SSHQuickCommandsPageState();
 }
 
-class _SshQuickCommandsPageState extends State<SshQuickCommandsPage> {
+class _SSHQuickCommandsPageState extends State<SSHQuickCommandsPage> {
   late List<SshQuickCmd> _items;
   bool _running = false;
 
@@ -20,15 +20,15 @@ class _SshQuickCommandsPageState extends State<SshQuickCommandsPage> {
   void initState() {
     super.initState();
     _items = List.from(
-      globalSetting.sshQuickCommands.isEmpty
-          ? defaultSshQuickCommands()
-          : globalSetting.sshQuickCommands,
+      globalSetting.SSHQuickCommands.isEmpty
+          ? defaultSSHQuickCommands()
+          : globalSetting.SSHQuickCommands,
     );
   }
 
   Future<void> _persist() async {
     final body = globalSetting.buildBackendGuiSettingsJson();
-    body['sshQuickCommands'] = _items.map((e) => e.toJson()).toList();
+    body['SSHQuickCommands'] = _items.map((e) => e.toJson()).toList();
     await HttpChannel().saveGuiSettings(body);
     globalSetting.applyBackendGuiSettings(body);
   }
@@ -43,7 +43,7 @@ class _SshQuickCommandsPageState extends State<SshQuickCommandsPage> {
       }
       return;
     }
-    if (c.useSudo && globalSetting.sshPassword.isEmpty) {
+    if (c.useSudo && globalSetting.SSHPassword.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.ssh_quick_sudo_need_password)),
@@ -55,10 +55,10 @@ class _SshQuickCommandsPageState extends State<SshQuickCommandsPage> {
     Object? client;
     try {
       client = await sshConnect(
-        username: globalSetting.sshUsername.trim(),
-        password: globalSetting.sshPassword,
+        username: globalSetting.SSHUsername.trim(),
+        password: globalSetting.SSHPassword,
       );
-      final line = sshQuickCmdRemoteLine(c, globalSetting.sshPassword);
+      final line = sshQuickCmdRemoteLine(c, globalSetting.SSHPassword);
       final out = await sshRunRemoteCommand(client, line);
       sshClientClose(client);
       client = null;
