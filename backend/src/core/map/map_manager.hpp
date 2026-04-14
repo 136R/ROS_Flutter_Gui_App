@@ -51,7 +51,8 @@ class MapManager {
   bool TryBuildCurrentTilesMetaJson(std::string* out_json) const;
 
   MapOperationResult ApplyMapEditFromQuery(const std::string& session_id, const std::string& map_name,
-      const std::string& topology_json, const std::string& obstacle_edits_json);
+      const std::string& source_map_name, const std::string& topology_json,
+      const std::string& obstacle_edits_json);
   MapOperationResult ApplyTilesExtraZoomFromJson(std::string_view body_json);
   MapOperationResult ApplyTilesExtraZoomForMapYaml(const std::string& map_name,
       std::string_view body_json);

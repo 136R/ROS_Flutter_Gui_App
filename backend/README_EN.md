@@ -164,7 +164,7 @@ Clients often append **`.png`**—keep routing / reverse proxy consistent.
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/updateMapEdit` | Query: `session_id`, `map_name`, `topology_json`, `obstacle_edits_json` (URL-encoded) |
+| GET | `/saveMapEdit` | Query: `session_id`, `map_name`, `topology_json`, `obstacle_edits_json` (URL-encoded) |
 | GET | `/api/settings` | GUI topics / frames JSON |
 | POST | `/api/settings` | Merge write + rebind ROS stream |
 | POST | `/robot/cmd_vel`, `/robot/nav_goal`, `/robot/initial_pose`, … | Control endpoints used by the app |

@@ -68,11 +68,12 @@ class HttpChannel {
     return TopologyMap.fromJson(j);
   }
 
-  Future<void> updateMapEdit({
+  Future<void> saveMapEdit({
     required String editSessionId,
     required TopologyMap topologyMap,
     required Map<int, int> obstacleEdits,
     String? mapName,
+    String? sourceMapName,
   }) async {
     final name = mapName ?? await getCurrentMap();
     if (name.isEmpty) {
@@ -83,17 +84,18 @@ class HttpChannel {
     final topologyJson = topologyMap.toJson();
     topologyJson['map_name'] = name;
     final uri = _buildUri(
-      '/updateMapEdit',
+      '/saveMapEdit',
       queryParameters: <String, String>{
         'session_id': editSessionId,
         'map_name': name,
+        'source_map_name': sourceMapName ?? name,
         'topology_json': jsonEncode(topologyJson),
         'obstacle_edits_json': jsonEncode(obstacleEditsJson),
       },
     );
     final res = await http.get(uri);
     if (res.statusCode != 200) {
-      throw Exception('updateMapEdit failed: ${res.statusCode} ${res.body}');
+      throw Exception('saveMapEdit failed: ${res.statusCode} ${res.body}');
     }
   }
 

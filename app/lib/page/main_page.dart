@@ -144,7 +144,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
       final topo = await httpChannel.getTopologyMap();
       wsChannel.mapManager.updateTopologyMap(topo);
     } catch (_) {}
-    _tileMapKey.currentState?.loadMeta();
+    _tileMapKey.currentState?.reloadMeta();
   }
 
   Future<bool> _pullLatestGuiSettingsForSsh(BuildContext context) async {
@@ -300,6 +300,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                 children: [
                   TileMap(
                     key: _tileMapKey,
+                    mapName: 'map',
                     onTap: () {
                       setState(() {
                         selectedNavPoint = null;

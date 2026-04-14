@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <boost/filesystem.hpp>
+#include <chrono>
 #include <cmath>
 
 namespace ros_gui_backend {
@@ -66,8 +67,22 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
   };
 
   namespace fs = boost::filesystem;
-  fs::remove_all(output_dir);
-  fs::create_directories(output_dir);
+  const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count();
+  const fs::path out_path(output_dir);
+  const fs::path out_parent = out_path.parent_path().empty() ? fs::path(".") : out_path.parent_path();
+  const std::string out_name = out_path.filename().string();
+  const fs::path staging_dir = out_parent / (out_name + ".staging." + std::to_string(now_ms));
+  const fs::path backup_dir = out_parent / (out_name + ".bak." + std::to_string(now_ms));
+
+  fs::create_directories(out_parent);
+  if (fs::exists(staging_dir)) {
+    fs::remove_all(staging_dir);
+  }
+  if (fs::exists(backup_dir)) {
+    fs::remove_all(backup_dir);
+  }
+  fs::create_directories(staging_dir);
 
   int total = 0;
   for (int z = 0; z <= max_z; ++z) {
@@ -93,7 +108,7 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
           }
         }
 
-        fs::path dir = fs::path(output_dir) / std::to_string(z) / std::to_string(x);
+        fs::path dir = staging_dir / std::to_string(z) / std::to_string(x);
         fs::create_directories(dir);
         std::string path = (dir / (std::to_string(y) + ".png")).string();
         if (!cv::imwrite(path, tile)) return false;
@@ -106,6 +121,17 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
     // LOG_INFO("TilesGen: z=" << z << " tiles_per_axis=" << tiles_per_axis
     //     << " x=[0," << (tiles_per_axis - 1) << "] y=[0," << (tiles_per_axis - 1) << "] "
     //     << tile_list);
+  }
+  if (fs::exists(out_path)) {
+    fs::rename(out_path, backup_dir);
+  }
+  fs::rename(staging_dir, out_path);
+  if (fs::exists(backup_dir)) {
+    try {
+      fs::remove_all(backup_dir);
+    } catch (const std::exception& e) {
+      LOGGER_WARN("TilesGen: cleanup backup dir failed {}, err={}", backup_dir.string(), e.what());
+    }
   }
   LOGGER_INFO("TilesGen: total {} tiles written to {}", total, output_dir);
   return total > 0;

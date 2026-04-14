@@ -164,7 +164,7 @@ GUI 话题等运行时偏好另存为 **`gui_app_settings.json`**（路径由 `A
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | `/updateMapEdit` | Query：`session_id`、`map_name`、`topology_json`、`obstacle_edits_json`（URL 编码） |
+| GET | `/saveMapEdit` | Query：`session_id`、`map_name`、`topology_json`、`obstacle_edits_json`（URL 编码） |
 | GET | `/api/settings` | GUI 话题/坐标系等 JSON |
 | POST | `/api/settings` | 合并写入并触发 ROS 流重绑 |
 | POST | `/robot/cmd_vel`、`/robot/nav_goal`、`/robot/initial_pose` 等 | 由前端调用的控制接口 |

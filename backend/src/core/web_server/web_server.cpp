@@ -16,7 +16,9 @@
 #include <chrono>
 #include <boost/filesystem.hpp>
 #include <fstream>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #if defined(__linux__)
@@ -32,6 +34,7 @@ namespace ros_gui_backend {
 namespace {
 
 std::function<void()> g_sigint_hook;
+std::mutex g_map_op_mutex;
 
 drogon::HttpStatusCode HttpStatusForMapError(const std::string& err) {
   if (err == "map not available") {
@@ -400,29 +403,32 @@ void WebServer::RunImpl(WebServerConfig config) {
   drogon::app().registerHandler(
       "/deleteMap",
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
-        LOGGER_INFO("GET /deleteMap map_name={}", req->getParameter("map_name"));
-        MapManager* m = MapManager::Instance();
-        std::string map_name = req->getParameter("map_name");
-        if (map_name.empty()) {
-          json_cb(std::move(callback), "{\"error\":\"missing map_name param\"}", drogon::k400BadRequest);
-          return;
-        }
-        if (map_name.find("..") != std::string::npos || map_name.find('/') != std::string::npos) {
-          json_cb(std::move(callback), "{\"error\":\"invalid map_name\"}", drogon::k400BadRequest);
-          return;
-        }
-        std::string dir_path = m->GetMapDir(map_name);
-        if (!fs::exists(dir_path)) {
-          json_cb(std::move(callback), "{\"error\":\"map not found\"}", drogon::k404NotFound);
-          return;
-        }
-        try {
-          fs::remove_all(dir_path);
-          json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
-        } catch (const std::exception& e) {
-          json_cb(std::move(callback), std::string("{\"error\":\"") + e.what() + "\"}",
-              drogon::k500InternalServerError);
-        }
+        const std::string map_name = req->getParameter("map_name");
+        std::thread([map_name, callback = std::move(callback), &json_cb]() mutable {
+          LOGGER_INFO("GET /deleteMap map_name={}", map_name);
+          std::lock_guard<std::mutex> lock(g_map_op_mutex);
+          MapManager* m = MapManager::Instance();
+          if (map_name.empty()) {
+            json_cb(std::move(callback), "{\"error\":\"missing map_name param\"}", drogon::k400BadRequest);
+            return;
+          }
+          if (map_name.find("..") != std::string::npos || map_name.find('/') != std::string::npos) {
+            json_cb(std::move(callback), "{\"error\":\"invalid map_name\"}", drogon::k400BadRequest);
+            return;
+          }
+          std::string dir_path = m->GetMapDir(map_name);
+          if (!fs::exists(dir_path)) {
+            json_cb(std::move(callback), "{\"error\":\"map not found\"}", drogon::k404NotFound);
+            return;
+          }
+          try {
+            fs::remove_all(dir_path);
+            json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
+          } catch (const std::exception& e) {
+            json_cb(std::move(callback), std::string("{\"error\":\"") + e.what() + "\"}",
+                drogon::k500InternalServerError);
+          }
+        }).detach();
       },
       {Get});
 
@@ -436,7 +442,7 @@ void WebServer::RunImpl(WebServerConfig config) {
         if (map_name.empty()) {
           topo = m->GetTopoMap();
         } else {
-          std::string json_path = m->GetMapDir(map_name) + "/map.topology";
+          std::string json_path = m->GetMapDir(map_name) + "/" + map_name + ".topology";
           if (!fs::exists(json_path)) {
             json_cb(std::move(callback), "{\"error\":\"topology not found\"}", drogon::k404NotFound);
             return;
@@ -466,49 +472,60 @@ void WebServer::RunImpl(WebServerConfig config) {
   drogon::app().registerHandler(
       "/setCurrentMap",
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
-        LOGGER_INFO("GET /setCurrentMap name={}", req->getParameter("name"));
-        MapManager* m = MapManager::Instance();
-        std::string name = req->getParameter("name");
-        if (name.empty()) {
-          json_cb(std::move(callback), "{\"error\":\"missing name param\"}", drogon::k400BadRequest);
-          LOGGER_ERROR("setCurrentMap missing name param");
-          return;
-        }
-        std::string base = m->GetMapDir(name);
-        std::string yaml_path = base + "/" + name + ".yaml";
-        std::ifstream check(yaml_path);
-        if (!check) {
-          json_cb(std::move(callback), "{\"error\":\"map not found\"}", drogon::k404NotFound);
-          LOGGER_ERROR("setCurrentMap map not found: {}", yaml_path);
-          return;
-        }
-        LOAD_MAP_STATUS status = m->LoadMapFromYaml(yaml_path);
-        if (status != LOAD_MAP_SUCCESS) {
-          json_cb(std::move(callback), "{\"error\":\"failed to load map\"}", drogon::k500InternalServerError);
-          LOGGER_ERROR("setCurrentMap failed to load map: {}", yaml_path);
-          return;
-        }
-        if (!m->SetCurrentMapName(name)) {
-          json_cb(std::move(callback), "{\"error\":\"failed to set current map\"}",
-              drogon::k500InternalServerError);
-          return;
-        }
-        json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
+        const std::string name = req->getParameter("name");
+        std::thread([name, callback = std::move(callback), &json_cb]() mutable {
+          LOGGER_INFO("GET /setCurrentMap name={}", name);
+          std::lock_guard<std::mutex> lock(g_map_op_mutex);
+          MapManager* m = MapManager::Instance();
+          if (name.empty()) {
+            json_cb(std::move(callback), "{\"error\":\"missing name param\"}", drogon::k400BadRequest);
+            LOGGER_ERROR("setCurrentMap missing name param");
+            return;
+          }
+          std::string base = m->GetMapDir(name);
+          std::string yaml_path = base + "/" + name + ".yaml";
+          std::ifstream check(yaml_path);
+          if (!check) {
+            json_cb(std::move(callback), "{\"error\":\"map not found\"}", drogon::k404NotFound);
+            LOGGER_ERROR("setCurrentMap map not found: {}", yaml_path);
+            return;
+          }
+          LOAD_MAP_STATUS status = m->LoadMapFromYaml(yaml_path);
+          if (status != LOAD_MAP_SUCCESS) {
+            json_cb(std::move(callback), "{\"error\":\"failed to load map\"}", drogon::k500InternalServerError);
+            LOGGER_ERROR("setCurrentMap failed to load map: {}", yaml_path);
+            return;
+          }
+          if (!m->SetCurrentMapName(name)) {
+            json_cb(std::move(callback), "{\"error\":\"failed to set current map\"}",
+                drogon::k500InternalServerError);
+            return;
+          }
+          json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
+        }).detach();
       },
       {Get});
 
   drogon::app().registerHandler(
-      "/updateMapEdit",
+      "/saveMapEdit",
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
-        MapManager* m = MapManager::Instance();
-        auto [ok, err] = m->ApplyMapEditFromQuery(req->getParameter("session_id"),
-            req->getParameter("map_name"), req->getParameter("topology_json"),
-            req->getParameter("obstacle_edits_json"));
-        if (!ok) {
-          json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
-          return;
-        }
-        json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
+        const std::string session_id = req->getParameter("session_id");
+        const std::string map_name = req->getParameter("map_name");
+        const std::string source_map_name = req->getParameter("source_map_name");
+        const std::string topology_json = req->getParameter("topology_json");
+        const std::string obstacle_edits_json = req->getParameter("obstacle_edits_json");
+        std::thread([session_id, map_name, source_map_name, topology_json, obstacle_edits_json,
+                        callback = std::move(callback), &json_cb]() mutable {
+          std::lock_guard<std::mutex> lock(g_map_op_mutex);
+          MapManager* m = MapManager::Instance();
+          auto [ok, err] = m->ApplyMapEditFromQuery(
+              session_id, map_name, source_map_name, topology_json, obstacle_edits_json);
+          if (!ok) {
+            json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
+            return;
+          }
+          json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
+        }).detach();
       },
       {Get});
 
@@ -548,7 +565,7 @@ void WebServer::RunImpl(WebServerConfig config) {
           const std::string& map_name) {
         LOGGER_INFO("GET /tiles/{}/meta", map_name);
         MapManager* m = MapManager::Instance();
-        std::string yaml_path = m->GetMapDir(map_name) + "/map.yaml";
+        std::string yaml_path = m->GetMapDir(map_name) + "/" + map_name + ".yaml";
         if (!fs::exists(yaml_path)) {
           json_cb(std::move(callback), "{\"error\":\"map not found\"}", drogon::k404NotFound);
           return;
@@ -577,16 +594,20 @@ void WebServer::RunImpl(WebServerConfig config) {
   drogon::app().registerHandler(
       "/tiles/config",
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
-        LOGGER_INFO("POST /tiles/config");
-        MapManager* m = MapManager::Instance();
-        auto [ok, err] = m->ApplyTilesExtraZoomFromJson(req->getBody());
-        if (!ok) {
-          json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
-          return;
-        }
-        nlohmann::json j;
-        j["extra_zoom_levels"] = m->GetExtraZoomLevels();
-        json_cb(std::move(callback), j.dump(), drogon::k200OK);
+        const std::string body(req->getBody());
+        std::thread([body, callback = std::move(callback), &json_cb]() mutable {
+          LOGGER_INFO("POST /tiles/config");
+          std::lock_guard<std::mutex> lock(g_map_op_mutex);
+          MapManager* m = MapManager::Instance();
+          auto [ok, err] = m->ApplyTilesExtraZoomFromJson(body);
+          if (!ok) {
+            json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
+            return;
+          }
+          nlohmann::json j;
+          j["extra_zoom_levels"] = m->GetExtraZoomLevels();
+          json_cb(std::move(callback), j.dump(), drogon::k200OK);
+        }).detach();
       },
       {Post});
 
@@ -594,16 +615,20 @@ void WebServer::RunImpl(WebServerConfig config) {
       "/tiles/{map_name}/config",
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback,
           const std::string& map_name) {
-        LOGGER_INFO("POST /tiles/{}/config", map_name);
-        MapManager* m = MapManager::Instance();
-        auto [ok, err] = m->ApplyTilesExtraZoomForMapYaml(map_name, req->getBody());
-        if (!ok) {
-          json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
-          return;
-        }
-        nlohmann::json j;
-        j["extra_zoom_levels"] = m->GetExtraZoomLevels();
-        json_cb(std::move(callback), j.dump(), drogon::k200OK);
+        const std::string body(req->getBody());
+        std::thread([map_name, body, callback = std::move(callback), &json_cb]() mutable {
+          LOGGER_INFO("POST /tiles/{}/config", map_name);
+          std::lock_guard<std::mutex> lock(g_map_op_mutex);
+          MapManager* m = MapManager::Instance();
+          auto [ok, err] = m->ApplyTilesExtraZoomForMapYaml(map_name, body);
+          if (!ok) {
+            json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
+            return;
+          }
+          nlohmann::json j;
+          j["extra_zoom_levels"] = m->GetExtraZoomLevels();
+          json_cb(std::move(callback), j.dump(), drogon::k200OK);
+        }).detach();
       },
       {Post});
 
@@ -611,7 +636,7 @@ void WebServer::RunImpl(WebServerConfig config) {
       "/tiles/{map_name}/{z}/{x}/{y}",
       [serve_tile](const HttpRequestPtr&, std::function<void(const HttpResponsePtr&)>&& callback,
           const std::string& map_name, const std::string& z, const std::string& x, const std::string& y) {
-        LOGGER_INFO("GET /tiles/{}/{}/{}/{}", map_name, z, x, y);
+        // LOGGER_INFO("GET /tiles/{}/{}/{}/{}", map_name, z, x, y);
         MapManager* m = MapManager::Instance();
         serve_tile(m->GetTilesDir(map_name), z, x, y, std::move(callback));
       },

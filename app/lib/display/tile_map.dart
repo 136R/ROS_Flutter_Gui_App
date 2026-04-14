@@ -8,7 +8,7 @@ import 'package:ros_flutter_gui_app/basic/RobotPose.dart';
 import 'package:ros_flutter_gui_app/basic/tile_map_meta.dart';
 import 'package:ros_flutter_gui_app/basic/topology_map.dart';
 import 'package:ros_flutter_gui_app/display/costmap.dart';
-import 'package:ros_flutter_gui_app/display/grid.dart' show WorldToLatLngFn, buildGridLayer;
+import 'package:ros_flutter_gui_app/display/grid.dart' show WorldToLatLngFn;
 import 'package:ros_flutter_gui_app/display/laser.dart' hide WorldToLatLngFn;
 import 'package:ros_flutter_gui_app/display/path.dart';
 import 'package:ros_flutter_gui_app/display/pointcloud.dart' hide WorldToLatLngFn;
@@ -42,6 +42,7 @@ class TileMap extends StatefulWidget {
   final String? selectedNavPointName;
   final bool followRobot;
   final bool enlargeNavPointMarkers;
+  final String mapName;
 
   const TileMap({
     super.key,
@@ -59,6 +60,7 @@ class TileMap extends StatefulWidget {
     this.selectedNavPointName,
     this.followRobot = false,
     this.enlargeNavPointMarkers = false,
+    this.mapName = '',
   });
 
   @override
@@ -69,7 +71,9 @@ class TileMapState extends State<TileMap> {
   MapMeta? _meta;
   String? _error;
   final MapController _mapController = MapController();
+  final ValueNotifier<TopologyMap> _topologyMap = ValueNotifier(TopologyMap(points: []));
   String _currentMapName = '';
+  bool _isLoadingMeta = false;
   double _currentZoom = 2.0;
   RobotPose? _relocPose;
   final Map<String, NavPoint> _draggingNavPoints = {};
@@ -79,12 +83,14 @@ class TileMapState extends State<TileMap> {
   final Map<int, int> _obstacleStrokeNewEdits = {};
   Offset? _lastObstaclePaintLocal;
   WsChannel? _wsChannelRef;
+  ValueNotifier<TopologyMap>? _mapManagerTopologyRef;
   bool _robotFollowListenerAttached = false;
+  bool _topologyListenerAttached = false;
 
   @override
   void initState() {
     super.initState();
-    loadMeta();
+    _syncMapDataFromWidget();
   }
 
   @override
@@ -92,14 +98,62 @@ class TileMapState extends State<TileMap> {
     super.didChangeDependencies();
     _wsChannelRef ??= context.read<WsChannel>();
     _syncRobotFollowListener();
+    _syncTopologyListener();
   }
 
   @override
   void didUpdateWidget(TileMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncRobotFollowListener();
+    _syncTopologyListener();
+    if (oldWidget.mapName != widget.mapName) {
+      _syncMapDataFromWidget();
+    }
     if (widget.followRobot && !oldWidget.followRobot) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _snapCameraToRobot(zoom: 6.0));
+    }
+  }
+
+  void _syncMapDataFromWidget() {
+    _loadMetaByMapName();
+  }
+
+  Future<void> _loadMetaByMapName() async {
+    if (_isLoadingMeta || !mounted) return;
+    _isLoadingMeta = true;
+    try {
+      final httpChannel = context.read<HttpChannel>();
+      var targetMapName = widget.mapName;
+      if (targetMapName.isEmpty) {
+        targetMapName = await httpChannel.getCurrentMap();
+      }
+      final topologyMap = await httpChannel.getTopologyMap(
+        mapName: targetMapName.isEmpty ? null : targetMapName,
+      );
+      final meta = await MapMeta.fetch(
+        globalSetting.tileServerUrl,
+        mapName: targetMapName.isEmpty ? null : targetMapName,
+      );
+      if (!mounted) return;
+      setState(() {
+        _meta = meta;
+        _error = null;
+        _currentMapName = targetMapName;
+      });
+      _topologyMap.value = topologyMap;
+      if (widget.followRobot) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _snapCameraToRobot(zoom: 6.0));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _meta = null;
+        _error = e.toString();
+        _currentMapName = widget.mapName;
+      });
+      _topologyMap.value = TopologyMap(points: []);
+    } finally {
+      _isLoadingMeta = false;
     }
   }
 
@@ -116,12 +170,40 @@ class TileMapState extends State<TileMap> {
     }
   }
 
+  void _syncTopologyListener() {
+    final ws = _wsChannelRef;
+    if (ws == null) return;
+    final notifier = ws.mapManager.topologyMap;
+    if (_mapManagerTopologyRef != notifier) {
+      if (_topologyListenerAttached && _mapManagerTopologyRef != null) {
+        _mapManagerTopologyRef!.removeListener(_onMapManagerTopologyChanged);
+      }
+      _mapManagerTopologyRef = notifier;
+      _topologyListenerAttached = false;
+    }
+    if (!_topologyListenerAttached) {
+      notifier.addListener(_onMapManagerTopologyChanged);
+      _topologyListenerAttached = true;
+    }
+  }
+
+  void _onMapManagerTopologyChanged() {
+    final notifier = _mapManagerTopologyRef;
+    if (!mounted || notifier == null) return;
+    _topologyMap.value = notifier.value;
+  }
+
   @override
   void dispose() {
     if (_robotFollowListenerAttached && _wsChannelRef != null) {
       _wsChannelRef!.robotPoseMap.removeListener(_onRobotPoseForFollow);
       _robotFollowListenerAttached = false;
     }
+    if (_topologyListenerAttached && _mapManagerTopologyRef != null) {
+      _mapManagerTopologyRef!.removeListener(_onMapManagerTopologyChanged);
+      _topologyListenerAttached = false;
+    }
+    _topologyMap.dispose();
     super.dispose();
   }
 
@@ -142,32 +224,6 @@ class TileMapState extends State<TileMap> {
     );
   }
 
-  Future<void> loadMeta() async {
-    try {
-      final httpChannel = context.read<HttpChannel>();
-      final mapName = await httpChannel.getCurrentMap();
-      final meta = await MapMeta.fetch(globalSetting.tileServerUrl);
-      if (mounted) {
-        setState(() {
-          _meta = meta;
-          _error = null;
-          _currentMapName = mapName;
-        });
-        if (widget.followRobot && _meta != null) {
-          WidgetsBinding.instance
-              .addPostFrameCallback((_) => _snapCameraToRobot(zoom: 6.0));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _meta = null;
-          _error = e.toString();
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
@@ -177,7 +233,10 @@ class TileMapState extends State<TileMap> {
           children: [
             Text(_error!, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: loadMeta, child: Text(AppLocalizations.of(context)!.retry)),
+            ElevatedButton(
+              onPressed: () => _syncMapDataFromWidget(),
+              child: Text(AppLocalizations.of(context)!.retry),
+            ),
           ],
         ),
       );
@@ -318,10 +377,7 @@ class TileMapState extends State<TileMap> {
     final worldY = world.y;
     widget.onTapWorld?.call(worldX, worldY);
 
-    final wsChannel = context.read<WsChannel>();
-    final navPoints = wsChannel.topologyMap_.value.points.isNotEmpty
-        ? wsChannel.topologyMap_.value.points
-        : wsChannel.mapManager.navPoints;
+    final navPoints = _topologyMap.value.points;
     const hitRadius = 0.5;
     for (final p in navPoints) {
       if ((p.x - worldX).abs() < hitRadius && (p.y - worldY).abs() < hitRadius) {
@@ -471,7 +527,7 @@ class TileMapState extends State<TileMap> {
           ));
         }
 
-        if (globalState.isLayerVisible('laser')) {
+        if (!widget.editMode && globalState.isLayerVisible('laser')) {
           final laserColor =
               globalState.layerColorFor('laser', Colors.red);
           final dotR = globalState.layerLaserDotRadius();
@@ -504,12 +560,9 @@ class TileMapState extends State<TileMap> {
         }
         if (globalState.isLayerVisible('topology')) {
           layers.add(ValueListenableBuilder(
-            valueListenable: wsChannel.topologyMap_,
+            valueListenable: _topologyMap,
             builder: (_, topologyMap, ___) {
-              final rawNavPoints = topologyMap.points.isNotEmpty
-                  ? topologyMap.points
-                  : wsChannel.mapManager.navPoints;
-              final navPoints = rawNavPoints
+              final navPoints = topologyMap.points
                   .map((p) => _draggingNavPoints[p.name] ?? p)
                   .toList();
               return buildTopologyLineLayer(
@@ -687,6 +740,10 @@ class TileMapState extends State<TileMap> {
 
   void zoomOut() {
     _mapController.move(_mapController.camera.center, _currentZoom - 0.5);
+  }
+
+  Future<void> reloadMeta() async {
+    await _loadMetaByMapName();
   }
 
 

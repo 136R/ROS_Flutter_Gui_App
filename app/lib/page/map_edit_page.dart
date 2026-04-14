@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:ros_flutter_gui_app/basic/nav_point.dart';
 import 'package:ros_flutter_gui_app/basic/topology_map.dart';
 import 'package:ros_flutter_gui_app/display/tile_map.dart';
-import 'package:ros_flutter_gui_app/provider/global_state.dart';
 import 'package:ros_flutter_gui_app/global/setting.dart';
+import 'package:ros_flutter_gui_app/provider/global_state.dart';
 import 'package:ros_flutter_gui_app/provider/http_channel.dart';
 import 'package:ros_flutter_gui_app/provider/map_manager.dart';
 import 'package:ros_flutter_gui_app/provider/ws_channel.dart';
@@ -44,7 +44,7 @@ class _MapEditPageState extends State<MapEditPage> {
   double _obstacleBrushSizeMeters = 0.05;
   late final GlobalState _globalState;
   final CommandManager _commandManager = CommandManager();
-  String _currentMapName = '';
+  String _currEditMapName = '';
 
   @override
   void initState() {
@@ -56,8 +56,8 @@ class _MapEditPageState extends State<MapEditPage> {
       _globalState.mode.value = Mode.mapEdit;
       try {
         final httpChannel = context.read<HttpChannel>();
-        _currentMapName = await httpChannel.getCurrentMap();
-        await _reloadCurrentMapData(mapName: _currentMapName);
+        _currEditMapName = await httpChannel.getCurrentMap();
+        await _reloadCurrentMapData(mapName: _currEditMapName);
         if (mounted) setState(() {});
       } catch (_) {}
     });
@@ -70,12 +70,12 @@ class _MapEditPageState extends State<MapEditPage> {
     final targetName = (mapName == null || mapName.isEmpty)
         ? await httpChannel.getCurrentMap()
         : mapName;
-    TopologyMap topo = await httpChannel.getTopologyMap();
+    final topo = await httpChannel.getTopologyMap(mapName: targetName);
+    _currEditMapName=targetName;
     mapManager.updateTopologyMap(topo);
     if (!mounted) return;
-    _tileMapKey.currentState?.loadMeta();
     setState(() {
-      _currentMapName = targetName;
+      _currEditMapName = targetName;
       selectedNavPoint = null;
       _selectedRoute = null;
       _editingRouteInfo = null;
@@ -127,6 +127,7 @@ class _MapEditPageState extends State<MapEditPage> {
               children: [
                 TileMap(
                   key: _tileMapKey,
+                  mapName: _currEditMapName,
                   enableMapInteraction: selectedTool == EditToolType.Move,
                   editMode: true,
                   enlargeNavPointMarkers:
@@ -374,13 +375,14 @@ class _MapEditPageState extends State<MapEditPage> {
           final obstacleEdits =
               _tileMapKey.currentState?.getObstacleEdits() ?? {};
           final editSessionId = DateTime.now().millisecondsSinceEpoch.toString();
-          await httpChannel.updateMapEdit(
+          await httpChannel.saveMapEdit(
             editSessionId: editSessionId,
             topologyMap: topologyMap,
             obstacleEdits: obstacleEdits,
+            mapName: _currEditMapName,
           );
           if (!mounted) return;
-          _tileMapKey.currentState?.loadMeta();
+          await _reloadCurrentMapData(mapName: _currEditMapName);
           toastification.show(
             context: context,
             type: ToastificationType.success,
@@ -425,7 +427,7 @@ class _MapEditPageState extends State<MapEditPage> {
     HttpChannel httpChannel,
     MapManager mapManager,
   ) async {
-    final controller = TextEditingController(text: _currentMapName);
+    final controller = TextEditingController(text: _currEditMapName);
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -457,13 +459,13 @@ class _MapEditPageState extends State<MapEditPage> {
       final obstacleEdits =
           _tileMapKey.currentState?.getObstacleEdits() ?? {};
       final editSessionId = DateTime.now().millisecondsSinceEpoch.toString();
-      await httpChannel.updateMapEdit(
+      await httpChannel.saveMapEdit(
         editSessionId: editSessionId,
         topologyMap: topologyMap,
         obstacleEdits: obstacleEdits,
         mapName: name,
+        sourceMapName: _currEditMapName,
       );
-      await httpChannel.setCurrentMap(name);
       await _reloadCurrentMapData(mapName: name);
       if (!mounted) return;
       toastification.show(
@@ -501,6 +503,12 @@ class _MapEditPageState extends State<MapEditPage> {
         httpChannel: httpChannel,
         tileServerUrl: globalSetting.tileServerUrl,
         mapManager: mapManager,
+        editingMapName: _currEditMapName,
+        onEditMap: (name) async {
+          await _reloadCurrentMapData(mapName: name);
+          if (!ctx.mounted) return;
+          Navigator.of(ctx).pop();
+        },
         onSwitchMap: (name) async {
           await httpChannel.setCurrentMap(name);
           await _reloadCurrentMapData(mapName: name);
@@ -1116,12 +1124,16 @@ class _MapManagementDialog extends StatefulWidget {
   final HttpChannel httpChannel;
   final String tileServerUrl;
   final MapManager mapManager;
+  final String editingMapName;
+  final Future<void> Function(String name) onEditMap;
   final Future<void> Function(String name) onSwitchMap;
 
   const _MapManagementDialog({
     required this.httpChannel,
     required this.tileServerUrl,
     required this.mapManager,
+    required this.editingMapName,
+    required this.onEditMap,
     required this.onSwitchMap,
   });
 
@@ -1196,6 +1208,7 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                         itemBuilder: (itemContext, index) {
                           final name = _mapNames[index];
                           final isCurrent = name == _currentMap;
+                          final isEditing = name == widget.editingMapName;
                           final thumbUrl =
                               '${widget.tileServerUrl}/tiles/$name/0/0/0.png?id=$name';
                           return Padding(
@@ -1229,6 +1242,14 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                       fontSize: 14,
                                     ),
                                   ),
+                                ),
+                                TextButton(
+                                  onPressed: isEditing
+                                      ? null
+                                      : () async {
+                                          await widget.onEditMap(name);
+                                        },
+                                  child: Text(AppLocalizations.of(itemContext)!.edit),
                                 ),
                                 
                                 const SizedBox(width: 4),

@@ -13,6 +13,8 @@ struct OccupancyGridData {
   double origin_y{0};
   double origin_yaw{0};
   std::vector<int8_t> data;
+  double free_thresh{0.25};
+  double occupied_thresh{0.65};
 };
 
 }  // namespace ros_gui_backend

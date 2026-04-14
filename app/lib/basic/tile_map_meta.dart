@@ -32,8 +32,10 @@ class MapMeta {
     return vm.Vector2(x, y);
   }
 
-  static Future<MapMeta> fetch(String baseUrl) async {
-    final uri = Uri.parse('$baseUrl/tiles/meta');
+  static Future<MapMeta> fetch(String baseUrl, {String? mapName}) async {
+    final uri = mapName != null && mapName.isNotEmpty
+        ? Uri.parse('$baseUrl/tiles/$mapName/meta')
+        : Uri.parse('$baseUrl/tiles/meta');
     final res = await http.get(uri);
     if (res.statusCode != 200) {
       throw Exception('Failed to load map meta: ${res.statusCode}');

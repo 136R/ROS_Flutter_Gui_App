@@ -174,17 +174,27 @@ bool MapManager::TryBuildCurrentTilesMetaJson(std::string* out_json) const {
 }
 
 MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_id,
-    const std::string& map_name, const std::string& topology_json,
-    const std::string& obstacle_edits_json) {
+    const std::string& map_name, const std::string& source_map_name,
+    const std::string& topology_json, const std::string& obstacle_edits_json) {
   LOGGER_INFO("map edit map_name={}", map_name);
-  if (!map_available_) {
-    return {false, "map not available"};
-  }
   if (session_id.empty() || map_name.empty() || topology_json.empty() || obstacle_edits_json.empty()) {
     return {false, "missing query params"};
   }
   std::string base_dir = GetMapDir(map_name);
   try {
+    const std::string yaml_path = base_dir + "/" + map_name + ".yaml";
+    OccupancyGridData target_map_data;
+    if (loadMapFromYaml(yaml_path, target_map_data) != LOAD_MAP_SUCCESS) {
+      std::string source_name = source_map_name.empty() ? GetCurrentMapName() : source_map_name;
+      if (source_name.empty()) {
+        return {false, "map not found"};
+      }
+      const std::string source_yaml_path = GetMapDir(source_name) + "/" + source_name + ".yaml";
+      if (loadMapFromYaml(source_yaml_path, target_map_data) != LOAD_MAP_SUCCESS) {
+        return {false, "map not found"};
+      }
+    }
+    fs::create_directories(fs::path(base_dir));
     if (!fs::exists(GetTilesDir(map_name))) {
       fs::create_directories(fs::path(GetTilesDir(map_name)));
     }
@@ -206,10 +216,10 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
         LOGGER_ERROR("Invalid cell index: {} error: {}", key, e.what());
         continue;
       }
-      if (cell_index < 0 || static_cast<size_t>(cell_index) >= map_data_.data.size()) {
+      if (cell_index < 0 || static_cast<size_t>(cell_index) >= target_map_data.data.size()) {
         continue;
       }
-      map_data_.data[static_cast<size_t>(cell_index)] = edit_value;
+      target_map_data.data[static_cast<size_t>(cell_index)] = edit_value;
       LOGGER_INFO("Apply obstacle edit cell_index={} edit_value={}", cell_index,
           static_cast<int>(edit_value));
     }
@@ -220,14 +230,22 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
     save_params.free_thresh = 0.25;
     save_params.occupied_thresh = 0.65;
     save_params.mode = MapMode::Trinary;
-    if (!saveMapToFile(map_data_, save_params)) {
+    if (!saveMapToFile(target_map_data, save_params)) {
       return {false, "failed to save map"};
     }
     auto topology_obj = nlohmann::json::parse(topology_json).get<TopologyMap>();
     saveTopologyMapToJson(topology_obj, map_file_base + ".topology");
-    map_available_ = true;
-    RegenerateTiles(GetTilesDir(map_name));
-    if (on_map_update_cb_) {
+    TilesMapGenerator gen;
+    if (!gen.GenerateAllTilesToDir(target_map_data, GetTilesDir(map_name), extra_zoom_levels_)) {
+      return {false, "failed to regenerate tiles"};
+    }
+    const bool is_current_map = (map_name == GetCurrentMapName());
+    if (is_current_map) {
+      map_data_ = target_map_data;
+      topo_map_ = topology_obj;
+      map_available_ = true;
+    }
+    if (is_current_map && on_map_update_cb_) {
       on_map_update_cb_();
     }
     return {true, {}};
@@ -311,7 +329,9 @@ void MapManager::UpdateMap(const OccupancyGridData& data) {
   if (GetCurrentMapName().empty()) {
     SetCurrentMapName("map");
   }
-  std::string current = GetCurrentMapName();
+
+  //topic中永远保存到map
+  std::string current = "map";
     if (!current.empty()) {
     fs::create_directories(fs::path(GetTilesDir(current)));
     SaveParameters save_params;
