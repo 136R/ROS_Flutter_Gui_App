@@ -1230,14 +1230,6 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                                     ),
                                   ),
                                 ),
-                                TextButton(
-                                  onPressed: isCurrent
-                                      ? null
-                                      : () async {
-                                          await widget.onSwitchMap(name);
-                                        },
-                                  child: Text(AppLocalizations.of(itemContext)!.edit),
-                                ),
                                 
                                 const SizedBox(width: 4),
                                 if (isCurrent)
