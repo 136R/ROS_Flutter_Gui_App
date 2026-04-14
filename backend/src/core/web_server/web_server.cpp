@@ -306,7 +306,6 @@ void WebServer::RunImpl(WebServerConfig config) {
   auto robot_post_json = [&json_cb](const char* path,
                              std::function<bool(const std::shared_ptr<IRosGuiNode>&, const nlohmann::json&)>&& fn) {
     return [path, fn, &json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
-      LOGGER_INFO("POST {}", path);
       auto node = NodeManager::Instance()->GetNode();
       if (!node) {
         json_cb(std::move(callback), JsonErrorBody("ros node not ready"), drogon::k503ServiceUnavailable);
@@ -334,6 +333,7 @@ void WebServer::RunImpl(WebServerConfig config) {
             const double vx = j.value("vx", 0.0);
             const double vy = j.value("vy", 0.0);
             const double vw = j.value("vw", 0.0);
+            LOGGER_INFO("POST /robot/cmd_vel vx={} vy={} vw={}", vx, vy, vw);
             return node->PublishCmdVel(vx, vy, vw);
           }),
       {Post});
@@ -347,6 +347,7 @@ void WebServer::RunImpl(WebServerConfig config) {
             const double yaw = j.value("yaw", j.value("theta", 0.0));
             const double roll = j.value("roll", 0.0);
             const double pitch = j.value("pitch", 0.0);
+            LOGGER_INFO("POST /robot/nav_goal x={} y={} yaw={} roll={} pitch={}", x, y, yaw, roll, pitch);
             return node->PublishNavGoal(x, y, roll, pitch, yaw);
           }),
       {Post});
@@ -360,6 +361,7 @@ void WebServer::RunImpl(WebServerConfig config) {
             const double yaw = j.value("yaw", j.value("theta", 0.0));
             const double roll = j.value("roll", 0.0);
             const double pitch = j.value("pitch", 0.0);
+            LOGGER_INFO("POST /robot/initial_pose x={} y={} yaw={} roll={} pitch={}", x, y, yaw, roll, pitch);
             return node->PublishInitialPose(x, y, roll, pitch, yaw);
           }),
       {Post});
