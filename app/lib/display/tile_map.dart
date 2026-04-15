@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -83,9 +85,14 @@ class TileMapState extends State<TileMap> {
   final Map<int, int> _obstacleStrokeNewEdits = {};
   Offset? _lastObstaclePaintLocal;
   WsChannel? _wsChannelRef;
+  GlobalState? _globalStateRef;
   ValueNotifier<TopologyMap>? _mapManagerTopologyRef;
+  ValueNotifier<bool>? _manualCtrlRef;
   bool _robotFollowListenerAttached = false;
   bool _topologyListenerAttached = false;
+  bool _manualRefreshListenerAttached = false;
+  Timer? _autoRefreshTimer;
+  int _tileCacheBuster = DateTime.now().millisecondsSinceEpoch ~/ 5000;
 
   @override
   void initState() {
@@ -97,8 +104,10 @@ class TileMapState extends State<TileMap> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _wsChannelRef ??= context.read<WsChannel>();
+    _globalStateRef ??= context.read<GlobalState>();
     _syncRobotFollowListener();
     _syncTopologyListener();
+    _syncManualRefreshListener();
   }
 
   @override
@@ -106,6 +115,7 @@ class TileMapState extends State<TileMap> {
     super.didUpdateWidget(oldWidget);
     _syncRobotFollowListener();
     _syncTopologyListener();
+    _syncManualRefreshListener();
     if (oldWidget.mapName != widget.mapName) {
       _syncMapDataFromWidget();
     }
@@ -195,6 +205,12 @@ class TileMapState extends State<TileMap> {
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = null;
+    if (_manualRefreshListenerAttached && _manualCtrlRef != null) {
+      _manualCtrlRef!.removeListener(_onManualControlChanged);
+      _manualRefreshListenerAttached = false;
+    }
     if (_robotFollowListenerAttached && _wsChannelRef != null) {
       _wsChannelRef!.robotPoseMap.removeListener(_onRobotPoseForFollow);
       _robotFollowListenerAttached = false;
@@ -205,6 +221,56 @@ class TileMapState extends State<TileMap> {
     }
     _topologyMap.dispose();
     super.dispose();
+  }
+
+  void _syncManualRefreshListener() {
+    final gs = _globalStateRef;
+    if (gs == null) return;
+    final notifier = gs.isManualCtrl;
+    if (_manualCtrlRef != notifier) {
+      if (_manualRefreshListenerAttached && _manualCtrlRef != null) {
+        _manualCtrlRef!.removeListener(_onManualControlChanged);
+      }
+      _manualCtrlRef = notifier;
+      _manualRefreshListenerAttached = false;
+    }
+    if (!_manualRefreshListenerAttached) {
+      notifier.addListener(_onManualControlChanged);
+      _manualRefreshListenerAttached = true;
+    }
+    _setAutoRefreshEnabled(notifier.value);
+  }
+
+  void _onManualControlChanged() {
+    final notifier = _manualCtrlRef;
+    if (notifier == null) return;
+    _setAutoRefreshEnabled(notifier.value);
+  }
+
+  void _setAutoRefreshEnabled(bool enabled) {
+    if (!enabled) {
+      _autoRefreshTimer?.cancel();
+      _autoRefreshTimer = null;
+      return;
+    }
+    if (_autoRefreshTimer != null) {
+      return;
+    }
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted) return;
+      final manualCtrl = _manualCtrlRef?.value ?? false;
+      if (!manualCtrl) {
+        _autoRefreshTimer?.cancel();
+        _autoRefreshTimer = null;
+        return;
+      }
+      final next = DateTime.now().millisecondsSinceEpoch ~/ 5000;
+      if (next != _tileCacheBuster) {
+        setState(() {
+          _tileCacheBuster = next;
+        });
+      }
+    });
   }
 
   void _onRobotPoseForFollow() {
@@ -339,9 +405,10 @@ class TileMapState extends State<TileMap> {
             ),
             children: [
               TileLayer(
+                key: ValueKey('tile_layer_${_currentMapName}_$_tileCacheBuster'),
                 urlTemplate: _currentMapName.isNotEmpty
-                    ? '${globalSetting.tileServerUrl}/tiles/{map_name}/{z}/{x}/{y}.png'
-                    : '${globalSetting.tileServerUrl}/tiles/{z}/{x}/{y}.png',
+                    ? '${globalSetting.tileServerUrl}/tiles/{map_name}/{z}/{x}/{y}.png?_ts=$_tileCacheBuster'
+                    : '${globalSetting.tileServerUrl}/tiles/{z}/{x}/{y}.png?_ts=$_tileCacheBuster',
                 additionalOptions: {'map_name': _currentMapName},
                 userAgentPackageName: 'ros_flutter_gui_app',
                 tileBounds: getTileBounds(),

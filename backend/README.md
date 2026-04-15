@@ -171,7 +171,7 @@ main.cpp
 | GET | `/saveMapEdit` | Query：`session_id`、`map_name`、`topology_json`、`obstacle_edits_json`（URL 编码） |
 | GET | `/api/settings` | GUI 话题/坐标系等 JSON |
 | POST | `/api/settings` | 合并写入并触发 ROS 流重绑 |
-| POST | `/robot/cmd_vel`、`/robot/nav_goal`、`/robot/initial_pose` 等 | 由前端调用的控制接口 |
+| POST | `/robot/nav_goal`、`/robot/initial_pose` 等 | 由前端调用的控制接口（`cmd_vel` 已改为 WebSocket 二进制消息） |
 
 完整列表以实现代码 **`web_server.cpp`** 为准。
 

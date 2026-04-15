@@ -6,9 +6,12 @@
 #include "core/map/json.hpp"
 
 #include <boost/filesystem.hpp>
+#include <condition_variable>
 #include <cstdlib>
 #include <fstream>
+#include <mutex>
 #include <sstream>
+#include <thread>
 
 #include "yaml-cpp/yaml.h"
 
@@ -26,9 +29,19 @@ static std::string GetHomeDir() {
 MapManager::MapManager() : map_available_(false) {
   std::string home = GetHomeDir();
   map_root_ = home.empty() ? ".maps" : home + "/.maps";
+  default_map_update_worker_ = std::thread(&MapManager::DefaultMapUpdateWorkerLoop, this);
 }
 
-MapManager::~MapManager() = default;
+MapManager::~MapManager() {
+  {
+    std::lock_guard<std::mutex> lock(default_map_update_mu_);
+    stop_default_map_update_worker_ = true;
+  }
+  default_map_update_cv_.notify_all();
+  if (default_map_update_worker_.joinable()) {
+    default_map_update_worker_.join();
+  }
+}
 
 std::string MapManager::GetMapRoot() const {
   return map_root_;
@@ -319,6 +332,33 @@ LOAD_MAP_STATUS MapManager::LoadMapFromYaml(const std::string& yaml_file, bool u
 }
 
 void MapManager::UpdateDefaultMap(const OccupancyGridData& data) {
+  {
+    std::lock_guard<std::mutex> lock(default_map_update_mu_);
+    wait_handle_default_map_ = data;
+    has_pending_default_map_update_ = true;
+  }
+  default_map_update_cv_.notify_one();
+}
+
+void MapManager::DefaultMapUpdateWorkerLoop() {
+  while (!stop_default_map_update_worker_) {
+    OccupancyGridData pending_data;
+    {
+      std::unique_lock<std::mutex> lock(default_map_update_mu_);
+      default_map_update_cv_.wait(lock, [this]() {
+        return stop_default_map_update_worker_ || has_pending_default_map_update_;
+      });
+      if (stop_default_map_update_worker_) {
+        return;
+      }
+      pending_data = wait_handle_default_map_;
+      has_pending_default_map_update_ = false;
+    }
+    ProcessDefaultMapUpdate(pending_data);
+  }
+}
+
+void MapManager::ProcessDefaultMapUpdate(const OccupancyGridData& data) {
   const std::string default_map_name = "map";
   fs::create_directories(fs::path(GetTilesDir(default_map_name)));
   SaveParameters save_params;

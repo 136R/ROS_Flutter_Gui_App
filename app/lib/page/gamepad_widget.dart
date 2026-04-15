@@ -100,6 +100,15 @@ class _GamepadWidgetState extends State<GamepadWidget> {
   static const double _sideToolbarClearance = 64;
   static const double _bottomClearance = 12;
 
+  double _safeConfigDouble(String key, double fallback) {
+    final raw = globalSetting.getConfig(key).trim();
+    final parsed = double.tryParse(raw);
+    if (parsed == null || parsed.isNaN || parsed.isInfinite) {
+      return fallback;
+    }
+    return parsed;
+  }
+
   @override
   Widget build(BuildContext context) {
     final manualOn =
@@ -124,13 +133,11 @@ class _GamepadWidgetState extends State<GamepadWidget> {
                 mode: JoystickMode.all,
                 includeInitialAnimation: false,
                 listener: (details) {
-                  double max_vx =
-                      double.parse(globalSetting.getConfig('MaxVx'));
+                  final max_vx = _safeConfigDouble('MaxVx', globalSetting.maxVx);
                   double vx = max_vx * details.y * -1;
                   Provider.of<WsChannel>(context, listen: false).setVx(vx);
 
-                  double max_vy =
-                      double.parse(globalSetting.getConfig('MaxVy'));
+                  final max_vy = _safeConfigDouble('MaxVy', globalSetting.maxVy);
                   double vy = max_vy * details.x * -1;
                   Provider.of<WsChannel>(context, listen: false).setVy(vy);
                 },
@@ -148,8 +155,7 @@ class _GamepadWidgetState extends State<GamepadWidget> {
                 mode: JoystickMode.horizontal,
                 includeInitialAnimation: false,
                 listener: (details) {
-                  double max_vw =
-                      double.parse(globalSetting.getConfig('MaxVw'));
+                  final max_vw = _safeConfigDouble('MaxVw', globalSetting.maxVw);
 
                   double vw = max_vw * details.x * -1;
                   Provider.of<WsChannel>(context, listen: false).setVw(vw);

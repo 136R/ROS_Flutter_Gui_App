@@ -7,6 +7,9 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 namespace ros_gui_backend {
 
@@ -24,6 +27,15 @@ class MapManager {
   bool map_available_;
   std::string default_tiles_dir_;
   int extra_zoom_levels_{5};
+  std::mutex default_map_update_mu_;
+  std::condition_variable default_map_update_cv_;
+  std::thread default_map_update_worker_;
+  bool stop_default_map_update_worker_{false};
+  bool has_pending_default_map_update_{false};
+  OccupancyGridData wait_handle_default_map_;
+
+  void DefaultMapUpdateWorkerLoop();
+  void ProcessDefaultMapUpdate(const OccupancyGridData& data);
 
  public:
   ~MapManager();

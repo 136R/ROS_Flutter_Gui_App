@@ -66,7 +66,7 @@ You **do not** need a separate **rosbridge** setup for this flow; older rosbridg
 | Map | Tile basemap; overlays: laser, point cloud, global/local path, trajectory, costmaps, footprint, topology (WS data) |
 | Pose | Pose in map frame, packaged by backend |
 | Reloc & nav | Initial pose and goals via backend HTTP; topology & map edit via HTTP |
-| Teleop | On-screen joystick & gamepad mapping; velocities via **`/robot/cmd_vel`** |
+| Teleop | On-screen joystick & gamepad mapping; velocity commands are sent via robot binary WebSocket messages (`ClientRobotMessage.cmd_vel`) |
 | Camera | Image topic bridged through backend to WS; failures show placeholder or blank |
 | Map edit | Obstacles & topology via REST |
 | Diagnostics | `DiagnosticArray` from backend; toasts for ERROR/WARN on main UI |

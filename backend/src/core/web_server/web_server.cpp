@@ -340,18 +340,6 @@ void WebServer::RunImpl(WebServerConfig config) {
   };
 
   drogon::app().registerHandler(
-      "/robot/cmd_vel",
-      robot_post_json("/robot/cmd_vel",
-          [](const std::shared_ptr<IRosGuiNode>& node, const nlohmann::json& j) {
-            const double vx = j.value("vx", 0.0);
-            const double vy = j.value("vy", 0.0);
-            const double vw = j.value("vw", 0.0);
-            LOGGER_INFO("POST /robot/cmd_vel vx={} vy={} vw={}", vx, vy, vw);
-            return node->PublishCmdVel(vx, vy, vw);
-          }),
-      {Post});
-
-  drogon::app().registerHandler(
       "/robot/nav_goal",
       robot_post_json("/robot/nav_goal",
           [](const std::shared_ptr<IRosGuiNode>& node, const nlohmann::json& j) {

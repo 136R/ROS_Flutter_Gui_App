@@ -120,16 +120,6 @@ class HttpChannel {
     }
   }
 
-  Future<bool> postRobotCmdVel(double vx, double vy, double vw) async {
-    final uri = _buildUri('/robot/cmd_vel');
-    final res = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json; charset=utf-8'},
-      body: jsonEncode({'vx': vx, 'vy': vy, 'vw': vw}),
-    );
-    return res.statusCode == 200;
-  }
-
   Future<bool> postRobotNavGoal(double x, double y, double yaw,
       {double roll = 0, double pitch = 0}) async {
     final uri = _buildUri('/robot/nav_goal');

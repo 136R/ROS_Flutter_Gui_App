@@ -167,7 +167,7 @@ Clients often append **`.png`**—keep routing / reverse proxy consistent.
 | GET | `/saveMapEdit` | Query: `session_id`, `map_name`, `topology_json`, `obstacle_edits_json` (URL-encoded) |
 | GET | `/api/settings` | GUI topics / frames JSON |
 | POST | `/api/settings` | Merge write + rebind ROS stream |
-| POST | `/robot/cmd_vel`, `/robot/nav_goal`, `/robot/initial_pose`, … | Control endpoints used by the app |
+| POST | `/robot/nav_goal`, `/robot/initial_pose`, … | Control endpoints used by the app (`cmd_vel` moved to binary WebSocket message) |
 
 Authoritative route list: **`web_server.cpp`**.
 

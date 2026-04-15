@@ -563,7 +563,19 @@ class WsChannel {
   }
 
   Future<void> sendSpeed(double vx, double vy, double vw) async {
-    await _http.postRobotCmdVel(vx, vy, vw);
+    final ws = _wsChannel;
+    if (ws == null) return;
+    final twist = gpb.Twist()
+      ..linear = (gpb.Vector3()
+        ..x = vx
+        ..y = vy
+        ..z = 0.0)
+      ..angular = (gpb.Vector3()
+        ..x = 0.0
+        ..y = 0.0
+        ..z = vw);
+    final msg = ClientRobotMessage()..cmdVel = twist;
+    ws.sink.add(msg.writeToBuffer());
   }
 
   Future<void> sendRelocPose(RobotPose pose) async {
