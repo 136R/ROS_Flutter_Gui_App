@@ -204,7 +204,7 @@ class _SSHQuickCommandsPageState extends State<SSHQuickCommandsPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 trailing: SizedBox(
-                  width: 168,
+                  width: 220,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -242,15 +242,27 @@ class _SSHQuickCommandsPageState extends State<SSHQuickCommandsPage> {
                                   }),
                                 ),
                               ),
-                              child: Switch.adaptive(
-                                value: c.useSudo,
-                                onChanged: _running
-                                    ? null
-                                    : (v) {
-                                        setState(() => _items[i] =
-                                            c.copyWith(useSudo: v));
-                                        _persist();
-                                      },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    l10n.ssh_quick_use_sudo,
+                                    style: Theme.of(switchCtx)
+                                        .textTheme
+                                        .bodySmall,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Switch.adaptive(
+                                    value: c.useSudo,
+                                    onChanged: _running
+                                        ? null
+                                        : (v) {
+                                            setState(() => _items[i] =
+                                                c.copyWith(useSudo: v));
+                                            _persist();
+                                          },
+                                  ),
+                                ],
                               ),
                             );
                           },

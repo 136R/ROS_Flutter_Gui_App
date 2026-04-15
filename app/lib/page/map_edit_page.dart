@@ -1214,128 +1214,211 @@ class _MapManagementDialogState extends State<_MapManagementDialog> {
                           final name = _mapNames[index];
                           final isCurrent = name == _currentMap;
                           final isEditing = name == widget.editingMapName;
+                          final isDefaultDynamicMap = name == 'map';
+                          final Color? itemHighlightColor = isEditing
+                              ? Colors.orange
+                              : (isDefaultDynamicMap ? Colors.green : null);
+                          final Color? itemTitleColor = isEditing
+                              ? Colors.orange.shade800
+                              : (isDefaultDynamicMap ? Colors.green.shade800 : null);
                           final thumbUrl =
                               '${widget.tileServerUrl}/tiles/$name/0/0/0.png?id=$name';
                           return Padding(
                             key: ValueKey(name),
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    thumbUrl,
-                                    key: ValueKey(thumbUrl),
-                                    gaplessPlayback: false,
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 64,
-                                      height: 64,
-                                      color: Colors.grey.shade300,
-                                      child: const Icon(Icons.map),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: itemHighlightColor != null
+                                    ? itemHighlightColor.withOpacity(0.10)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: itemHighlightColor != null
+                                    ? Border.all(color: itemHighlightColor.withOpacity(0.65))
+                                    : null,
+                              ),
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isDefaultDynamicMap)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.withOpacity(0.14),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              AppLocalizations.of(itemContext)!.default_dynamic_map_tag,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.green.shade900,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        if (isDefaultDynamicMap && isEditing)
+                                          const SizedBox(width: 4),
+                                        if (isEditing)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withOpacity(0.14),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              AppLocalizations.of(itemContext)!.editing_map_tag,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.orange.shade900,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: isEditing
-                                      ? null
-                                      : () async {
-                                          await widget.onEditMap(name);
-                                        },
-                                  child: Text(AppLocalizations.of(itemContext)!.edit),
-                                ),
-                                
-                                const SizedBox(width: 4),
-                                if (isCurrent)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade100,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      AppLocalizations.of(itemContext)!.current_in_use,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  TextButton(
-                                    onPressed: () async {
-                                      await widget.onSwitchMap(name);
-                                    },
-                                    child: Text(AppLocalizations.of(itemContext)!.switch_map),
-                                  ),
-                                  const SizedBox(width: 4),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.delete,
-                                    size: 20,
-                                    color: isCurrent ? Colors.grey : Colors.red,
-                                  ),
-                                  tooltip: isCurrent ? AppLocalizations.of(itemContext)!.delete_map_tooltip_current : AppLocalizations.of(itemContext)!.delete,
-                                  onPressed: isCurrent
-                                      ? null
-                                      : () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: dialogContext,
-                                      builder: (ctx) => AlertDialog(
-                                        title: Text(AppLocalizations.of(ctx)!.confirm_delete),
-                                        content: Text(AppLocalizations.of(ctx)!.confirm_delete_map(name)),
-                                        actions: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 18),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.network(
+                                            thumbUrl,
+                                            key: ValueKey(thumbUrl),
+                                            gaplessPlayback: false,
+                                            width: 64,
+                                            height: 64,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 64,
+                                              height: 64,
+                                              color: Colors.grey.shade300,
+                                              child: const Icon(Icons.map),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  name,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                    color: itemTitleColor,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: isEditing
+                                              ? null
+                                              : () async {
+                                                  await widget.onEditMap(name);
+                                                },
+                                          child: Text(AppLocalizations.of(itemContext)!.edit),
+                                        ),
+
+                                        const SizedBox(width: 4),
+                                        if (isCurrent)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade100,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              AppLocalizations.of(itemContext)!.current_in_use,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                          )
+                                        else
                                           TextButton(
-                                            onPressed: () => Navigator.of(ctx).pop(false),
-                                            child: Text(AppLocalizations.of(ctx)!.cancel),
+                                            onPressed: () async {
+                                              await widget.onSwitchMap(name);
+                                            },
+                                            child: Text(AppLocalizations.of(itemContext)!.switch_map),
                                           ),
-                                          FilledButton(
-                                            onPressed: () => Navigator.of(ctx).pop(true),
-                                            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                                            child: Text(AppLocalizations.of(ctx)!.delete),
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.delete,
+                                            size: 20,
+                                            color: isCurrent ? Colors.grey : Colors.red,
                                           ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm != true || !mounted) return;
-                                    try {
-                                      await widget.httpChannel.deleteMap(name);
-                                      if (!mounted) return;
-                                      await _load();
-                                      if (!mounted || !dialogContext.mounted) return;
-                                      toastification.show(
-                                        context: dialogContext,
-                                        type: ToastificationType.success,
-                                        title: Text(AppLocalizations.of(dialogContext)!.map_deleted(name)),
-                                        autoCloseDuration: const Duration(seconds: 2),
-                                      );
-                                    } catch (e) {
-                                      if (!mounted || !dialogContext.mounted) return;
-                                      toastification.show(
-                                        context: dialogContext,
-                                        type: ToastificationType.error,
-                                        title: Text(AppLocalizations.of(dialogContext)!.delete_failed(e.toString())),
-                                        autoCloseDuration: const Duration(seconds: 3),
-                                      );
-                                    }
-                                  },
-                                ),
-                              ],
+                                          tooltip: isCurrent ? AppLocalizations.of(itemContext)!.delete_map_tooltip_current : AppLocalizations.of(itemContext)!.delete,
+                                          onPressed: isCurrent
+                                              ? null
+                                              : () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: dialogContext,
+                                              builder: (ctx) => AlertDialog(
+                                                title: Text(AppLocalizations.of(ctx)!.confirm_delete),
+                                                content: Text(AppLocalizations.of(ctx)!.confirm_delete_map(name)),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.of(ctx).pop(false),
+                                                    child: Text(AppLocalizations.of(ctx)!.cancel),
+                                                  ),
+                                                  FilledButton(
+                                                    onPressed: () => Navigator.of(ctx).pop(true),
+                                                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                                    child: Text(AppLocalizations.of(ctx)!.delete),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            if (confirm != true || !mounted) return;
+                                            try {
+                                              await widget.httpChannel.deleteMap(name);
+                                              if (!mounted) return;
+                                              await _load();
+                                              if (!mounted || !dialogContext.mounted) return;
+                                              toastification.show(
+                                                context: dialogContext,
+                                                type: ToastificationType.success,
+                                                title: Text(AppLocalizations.of(dialogContext)!.map_deleted(name)),
+                                                autoCloseDuration: const Duration(seconds: 2),
+                                              );
+                                            } catch (e) {
+                                              if (!mounted || !dialogContext.mounted) return;
+                                              toastification.show(
+                                                context: dialogContext,
+                                                type: ToastificationType.error,
+                                                title: Text(AppLocalizations.of(dialogContext)!.delete_failed(e.toString())),
+                                                autoCloseDuration: const Duration(seconds: 3),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },

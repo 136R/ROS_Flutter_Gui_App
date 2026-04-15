@@ -449,10 +449,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get no_map => '暂无地图';
 
   @override
+  String get default_dynamic_map_tag => '默认';
+
+  @override
+  String get editing_map_tag => '编辑中';
+
+  @override
   String get current_in_use => '当前使用';
 
   @override
-  String get switch_map => '切换地图';
+  String get switch_map => '切换';
 
   @override
   String get delete_map_tooltip_current => '当前使用中，不可删除';

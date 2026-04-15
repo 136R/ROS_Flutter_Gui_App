@@ -454,10 +454,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get no_map => 'No Map';
 
   @override
+  String get default_dynamic_map_tag => 'Default';
+
+  @override
+  String get editing_map_tag => 'Editing';
+
+  @override
   String get current_in_use => 'In Use';
 
   @override
-  String get switch_map => 'Switch Map';
+  String get switch_map => 'Switch';
 
   @override
   String get delete_map_tooltip_current => 'In use, cannot delete';

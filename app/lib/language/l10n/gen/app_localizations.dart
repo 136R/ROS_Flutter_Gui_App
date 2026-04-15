@@ -962,6 +962,18 @@ abstract class AppLocalizations {
   /// **'暂无地图'**
   String get no_map;
 
+  /// No description provided for @default_dynamic_map_tag.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认'**
+  String get default_dynamic_map_tag;
+
+  /// No description provided for @editing_map_tag.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑中'**
+  String get editing_map_tag;
+
   /// No description provided for @current_in_use.
   ///
   /// In zh, this message translates to:
@@ -971,7 +983,7 @@ abstract class AppLocalizations {
   /// No description provided for @switch_map.
   ///
   /// In zh, this message translates to:
-  /// **'切换地图'**
+  /// **'切换'**
   String get switch_map;
 
   /// No description provided for @delete_map_tooltip_current.
