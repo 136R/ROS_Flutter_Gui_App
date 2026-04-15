@@ -128,10 +128,10 @@ class _MainFlamePageState extends State<MainFlamePage> {
   }) {
     final ColorScheme scheme = theme.colorScheme;
     return Material(
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.06),
+      elevation: 0,
+      shadowColor: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
-      color: backgroundColor ?? scheme.surfaceContainerHigh.withOpacity(0.94),
+      color: backgroundColor ?? scheme.surfaceContainerHigh.withOpacity(0.55),
       clipBehavior: Clip.antiAlias,
       child: child,
     );
@@ -417,9 +417,11 @@ class _MainFlamePageState extends State<MainFlamePage> {
   }
 
   Widget _buildTopMenuBar(BuildContext context, ThemeData theme) {
+    final Color chipBackgroundColor =
+        theme.colorScheme.surfaceContainerHigh.withOpacity(0.55);
     return Positioned(
-      left: 5,
-      top: 1,
+      left: 25,
+      top: 2,
       child: Container(
         height: 50,
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -435,6 +437,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                     const IconData(0xe606, fontFamily: "Speed"),
                     color: Colors.green[400],
                   ),
+                  backgroundColor: chipBackgroundColor,
                   label: ValueListenableBuilder<RobotSpeed>(
                     valueListenable:
                         Provider.of<WsChannel>(context, listen: true)
@@ -450,6 +453,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: RawChip(
                   avatar: const Icon(IconData(0xe680, fontFamily: "Speed")),
+                  backgroundColor: chipBackgroundColor,
                   label: ValueListenableBuilder<RobotSpeed>(
                     valueListenable:
                         Provider.of<WsChannel>(context, listen: true)
@@ -469,6 +473,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                     const IconData(0xe995, fontFamily: "Battery"),
                     color: Colors.amber[300],
                   ),
+                  backgroundColor: chipBackgroundColor,
                   label: ValueListenableBuilder<double>(
                     valueListenable:
                         Provider.of<WsChannel>(context, listen: false)
@@ -488,6 +493,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                     color: Colors.green,
                     size: 16,
                   ),
+                  backgroundColor: chipBackgroundColor,
                   label: ValueListenableBuilder<ActionStatus>(
                     valueListenable:
                         Provider.of<WsChannel>(context, listen: true)
@@ -540,7 +546,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                             size: 16,
                           ),
                           label: Text(chipText),
-                          backgroundColor: chipColor.withOpacity(0.1),
+                          backgroundColor: chipBackgroundColor,
                           elevation: 0,
                           onPressed: () {
                             Navigator.push(
@@ -566,7 +572,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
 
   Widget _buildLeftToolbar(BuildContext context, ThemeData theme) {
     return Positioned(
-      left: 5,
+      left: 10,
       top: 60,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: 280),
@@ -835,8 +841,8 @@ class _MainFlamePageState extends State<MainFlamePage> {
       padding: const EdgeInsets.all(10),
     );
     return Positioned(
-      right: 5,
-      top: 30,
+      right: 10,
+      top: 40,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -1218,8 +1224,8 @@ class _MainFlamePageState extends State<MainFlamePage> {
     final double maxLegendWidth =
         MediaQuery.sizeOf(context).width * 0.62;
     return Positioned(
-      right: 8,
-      top: 2,
+      right: 30,
+      top: 5,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxLegendWidth),
         child: SingleChildScrollView(

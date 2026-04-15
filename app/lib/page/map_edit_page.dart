@@ -266,32 +266,51 @@ class _MapEditPageState extends State<MapEditPage> {
           ),
         ],
       ),
-      child: Row(
+      child: Stack(
         children: [
-          const SizedBox(width: 6),
-          _buildUndoButton(),
-          const SizedBox(width: 2),
-          _buildSaveButton(httpChannel, mapManager),
-          const SizedBox(width: 2),
-          _buildSaveAsButton(httpChannel, mapManager),
-          const SizedBox(width: 2),
-          _buildMapManageButton(context, theme, httpChannel, mapManager),
-          if (selectedTool == EditToolType.AddNavPoint) ...[
-            const SizedBox(width: 4),
-            TextButton.icon(
-              onPressed: _onAddRobotPositionPressed,
-              icon: const Icon(Icons.my_location, color: Colors.white, size: 16),
-              label: Text(AppLocalizations.of(context)!.add_current_position, style: const TextStyle(color: Colors.white, fontSize: 12)),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.blue.shade700,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          Row(
+            children: [
+              const SizedBox(width: 20),
+              _buildUndoButton(),
+              const SizedBox(width: 2),
+              _buildSaveButton(httpChannel, mapManager),
+              const SizedBox(width: 2),
+              _buildSaveAsButton(httpChannel, mapManager),
+              const SizedBox(width: 2),
+              _buildMapManageButton(context, theme, httpChannel, mapManager),
+              if (selectedTool == EditToolType.AddNavPoint) ...[
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: _onAddRobotPositionPressed,
+                  icon: const Icon(Icons.my_location, color: Colors.white, size: 16),
+                  label: Text(AppLocalizations.of(context)!.add_current_position, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                iconSize: 22,
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                tooltip: AppLocalizations.of(context)!.exit,
+                onPressed: () async {
+                  _tileMapKey.currentState?.flushDraggingNavPoints();
+                  widget.onExit?.call();
+                  _globalState.mode.value = Mode.normal;
+                  if (mounted) Navigator.pop(context);
+                },
               ),
-            ),
-          ],
-          Expanded(
-            child: Center(
+              const SizedBox(width: 20),
+            ],
+          ),
+          Center(
+            child: IgnorePointer(
               child: Text(
                 AppLocalizations.of(context)!.map_edit,
                 style: TextStyle(
@@ -302,20 +321,6 @@ class _MapEditPageState extends State<MapEditPage> {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white, size: 22),
-            iconSize: 22,
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
-            tooltip: AppLocalizations.of(context)!.exit,
-            onPressed: () async {
-              _tileMapKey.currentState?.flushDraggingNavPoints();
-              widget.onExit?.call();
-              _globalState.mode.value = Mode.normal;
-              if (mounted) Navigator.pop(context);
-            },
-          ),
-          const SizedBox(width: 6),
         ],
       ),
     );
