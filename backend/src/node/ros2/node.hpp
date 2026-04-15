@@ -2,7 +2,6 @@
 
 #include "node/interface.hpp"
 #include "common/config/config.hpp"
-#include "core/map/map_manager.hpp"
 #include "core/map/map_io.hpp"
 #include "node/ros2/convert.hpp"
 
@@ -58,12 +57,11 @@ class RosGuiNode : private detail::RosGuiNodeRclInit, public rclcpp::Node, publi
   bool PublishNavGoal(double x, double y, double roll, double pitch, double yaw) override;
   bool PublishInitialPose(double x, double y, double roll, double pitch, double yaw) override;
   bool PublishNavCancel() override;
+  bool PublishMap(const OccupancyGridData& map, const std::string& frame_id) override;
   bool LookupTransform(const std::string& target_frame, const std::string& source_frame,
       std::string* json_out, std::string* err) override;
 
  private:
-  bool LoadMapResponseFromYaml(const std::string& yaml_file,
-      std::shared_ptr<nav2_msgs::srv::LoadMap::Response> response);
   void GetMapCallback(const std::shared_ptr<rmw_request_id_t>,
       const std::shared_ptr<nav_msgs::srv::GetMap::Request>,
       std::shared_ptr<nav_msgs::srv::GetMap::Response>);
@@ -76,7 +74,6 @@ class RosGuiNode : private detail::RosGuiNodeRclInit, public rclcpp::Node, publi
   void RawOccMapUpdateCallback(const std::shared_ptr<OccupancyGridData> msg);
   bool SaveMapTopicToFile(const std::string& map_topic, const SaveParameters& save_parameters);
 
-  void PublishMapUpdate();
   void SetupGuiStreamsLocked();
   void ClearGuiStreamsLocked();
   void PoseTimerTick();
@@ -112,6 +109,10 @@ class RosGuiNode : private detail::RosGuiNodeRclInit, public rclcpp::Node, publi
   AppConfig gui_settings_;
   std::mutex image_mu_;
   std::mutex stream_mu_;
+  std::mutex map_mu_;
+  OccupancyGridData map_data_;
+  std::string map_frame_id_;
+  bool map_available_{false};
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

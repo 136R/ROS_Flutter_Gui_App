@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/config/config.hpp"
+#include "core/map/occupancy_grid.hpp"
 
 #include <string>
 
@@ -19,6 +20,7 @@ class IRosGuiNode {
   virtual bool PublishNavGoal(double x, double y, double roll, double pitch, double yaw) = 0;
   virtual bool PublishInitialPose(double x, double y, double roll, double pitch, double yaw) = 0;
   virtual bool PublishNavCancel() = 0;
+  virtual bool PublishMap(const OccupancyGridData& map, const std::string& frame_id) = 0;
   virtual bool LookupTransform(const std::string& target_frame, const std::string& source_frame,
       std::string* json_out, std::string* err) = 0;
 };

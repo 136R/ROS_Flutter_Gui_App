@@ -160,13 +160,13 @@ bool MapManager::TryBuildCurrentTilesMetaJson(std::string* out_json) const {
     return false;
   }
   TilesMapGenerator gen;
-  int max_zoom = gen.GetMaxZoom(map_data_.width, map_data_.height, extra_zoom_levels_);
+  int max_zoom = gen.GetMaxZoom(current_map_.width, current_map_.height, extra_zoom_levels_);
   nlohmann::json j;
-  j["resolution"] = map_data_.resolution;
-  j["origin_x"] = map_data_.origin_x;
-  j["origin_y"] = map_data_.origin_y;
-  j["width"] = map_data_.width;
-  j["height"] = map_data_.height;
+  j["resolution"] = current_map_.resolution;
+  j["origin_x"] = current_map_.origin_x;
+  j["origin_y"] = current_map_.origin_y;
+  j["width"] = current_map_.width;
+  j["height"] = current_map_.height;
   j["max_zoom"] = max_zoom;
   j["extra_zoom_levels"] = extra_zoom_levels_;
   *out_json = j.dump();
@@ -241,12 +241,9 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
     }
     const bool is_current_map = (map_name == GetCurrentMapName());
     if (is_current_map) {
-      map_data_ = target_map_data;
+      current_map_ = target_map_data;
       topo_map_ = topology_obj;
       map_available_ = true;
-    }
-    if (is_current_map && on_map_update_cb_) {
-      on_map_update_cb_();
     }
     return {true, {}};
   } catch (const std::exception& e) {
@@ -254,7 +251,7 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
   }
 }
 
-MapOperationResult MapManager::ApplyTilesExtraZoomFromJson(std::string_view body_json) {
+MapOperationResult MapManager::ApplyTilesExtraZoomFromJson(const std::string& body_json) {
   if (!map_available_) {
     return {false, "map not available"};
   }
@@ -274,7 +271,7 @@ MapOperationResult MapManager::ApplyTilesExtraZoomFromJson(std::string_view body
 }
 
 MapOperationResult MapManager::ApplyTilesExtraZoomForMapYaml(const std::string& map_name,
-    std::string_view body_json) {
+    const std::string& body_json) {
   std::string yaml_path = GetMapDir(map_name) + "/map.yaml";
   if (!fs::exists(yaml_path)) {
     return {false, "map not found"};
@@ -286,7 +283,7 @@ MapOperationResult MapManager::ApplyTilesExtraZoomForMapYaml(const std::string& 
       return {false, "extra_zoom_levels must be 0-8"};
     }
     extra_zoom_levels_ = v;
-    (void)LoadMapFromYaml(yaml_path);
+    (void)LoadMapFromYaml(yaml_path, false);
     return {true, {}};
   } catch (const std::exception&) {
     return {false, "invalid json"};
@@ -296,13 +293,14 @@ MapOperationResult MapManager::ApplyTilesExtraZoomForMapYaml(const std::string& 
 void MapManager::RegenerateTiles(const std::string& output_dir) {
   if (!map_available_) return;
   TilesMapGenerator gen;
-  if (gen.GenerateAllTilesToDir(map_data_, output_dir, extra_zoom_levels_)) {
+  if (gen.GenerateAllTilesToDir(current_map_, output_dir, extra_zoom_levels_)) {
     LOGGER_INFO("Tiles regenerated to {}", output_dir);
   }
 }
 
-LOAD_MAP_STATUS MapManager::LoadMapFromYaml(const std::string& yaml_file) {
-  LOAD_MAP_STATUS status = loadMapFromYaml(yaml_file, map_data_);
+LOAD_MAP_STATUS MapManager::LoadMapFromYaml(const std::string& yaml_file, bool update_current_state) {
+  OccupancyGridData loaded_map;
+  LOAD_MAP_STATUS status = loadMapFromYaml(yaml_file, loaded_map);
   if (status != LOAD_MAP_SUCCESS) {
     return status;
   }
@@ -311,58 +309,41 @@ LOAD_MAP_STATUS MapManager::LoadMapFromYaml(const std::string& yaml_file) {
   if (pos != std::string::npos) {
     json_file.replace(pos, 5, ".topology");
   }
-  topo_map_file_name_ = json_file;
-  LoadTopologyMapFromJson(json_file, topo_map_);
-  map_available_ = true;
-  size_t slash_pos = yaml_file.find_last_of("/\\");
-  std::string map_dir = (slash_pos != std::string::npos && slash_pos > 0)
-      ? yaml_file.substr(0, slash_pos) : ".";
-  if (on_map_update_cb_) {
-    on_map_update_cb_();
+  if (update_current_state) {
+    topo_map_file_name_ = json_file;
+    LoadTopologyMapFromJson(json_file, topo_map_);
+    current_map_ = loaded_map;
+    map_available_ = true;
   }
   return LOAD_MAP_SUCCESS;
 }
 
-void MapManager::UpdateMap(const OccupancyGridData& data) {
-  map_data_ = data;
-  map_available_ = true;
-  if (GetCurrentMapName().empty()) {
-    SetCurrentMapName("map");
+void MapManager::UpdateDefaultMap(const OccupancyGridData& data) {
+  const std::string default_map_name = "map";
+  fs::create_directories(fs::path(GetTilesDir(default_map_name)));
+  SaveParameters save_params;
+  save_params.map_file_name = GetMapDir(default_map_name) + "/map";
+  save_params.image_format = "pgm";
+  save_params.free_thresh = 0.25;
+  save_params.occupied_thresh = 0.65;
+  save_params.mode = MapMode::Trinary;
+  if (!saveMapToFile(data, save_params)) {
+    LOGGER_ERROR("Failed to persist default map to {}", save_params.map_file_name);
+    return;
+  }
+  TilesMapGenerator gen;
+  if (gen.GenerateAllTilesToDir(data, GetTilesDir(default_map_name), extra_zoom_levels_)) {
+    LOGGER_INFO("Default map tiles regenerated to {}", GetTilesDir(default_map_name));
   }
 
-  //topic中永远保存到map
-  std::string current = "map";
-    if (!current.empty()) {
-    fs::create_directories(fs::path(GetTilesDir(current)));
-    SaveParameters save_params;
-    save_params.map_file_name = GetMapDir(current) + "/map";
-    save_params.image_format = "pgm";
-    save_params.free_thresh = 0.25;
-    save_params.occupied_thresh = 0.65;
-    save_params.mode = MapMode::Trinary;
-    saveMapToFile(map_data_, save_params);
-  }
-  std::string out_dir = current.empty() ? default_tiles_dir_ : GetTilesDir(current);
-  RegenerateTiles(out_dir);
-  LOGGER_INFO("Map updated, regenerated tiles");
-  if (on_map_update_cb_) {
-    on_map_update_cb_();
+  const std::string current_name = GetCurrentMapName();
+  if (current_name.empty() || current_name == default_map_name) {
+    current_map_ = data;
+    map_available_ = true;
   }
 }
 
-void MapManager::UpdateTopoMap(const TopologyMap& data) {
-  topo_map_ = data;
-  if (GetCurrentMapName().empty()) {
-    SetCurrentMapName("map");
-  }
-  std::string current = GetCurrentMapName();
-  if (!current.empty()) {
-    fs::create_directories(fs::path(GetTilesDir(current)));
-    saveTopologyMapToJson(topo_map_, GetMapDir(current) + "/" + current + ".topology");
-  }
-  if (on_map_update_cb_) {
-    on_map_update_cb_();
-  }
-}
+
+
 
 }  // namespace ros_gui_backend

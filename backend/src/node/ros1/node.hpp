@@ -1,11 +1,11 @@
 #pragma once
 
 #include "node/interface.hpp"
-#include "core/map/map_manager.hpp"
 
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/GetMap.h>
+#include <mutex>
 
 namespace ros_gui_backend {
 
@@ -24,6 +24,7 @@ class RosGuiNode : public IRosGuiNode {
   bool PublishNavGoal(double x, double y, double roll, double pitch, double yaw) override;
   bool PublishInitialPose(double x, double y, double roll, double pitch, double yaw) override;
   bool PublishNavCancel() override;
+  bool PublishMap(const OccupancyGridData& map, const std::string& frame_id) override;
   bool LookupTransform(const std::string& target_frame, const std::string& source_frame,
       std::string* json_out, std::string* err) override;
 
@@ -34,7 +35,10 @@ class RosGuiNode : public IRosGuiNode {
   ros::Publisher map_pub_;
   ros::ServiceServer get_map_service_;
 
-  void PublishMapUpdate();
+  std::mutex map_mu_;
+  OccupancyGridData map_data_;
+  std::string map_frame_id_;
+  bool map_available_{false};
 };
 
 }  // namespace ros_gui_backend

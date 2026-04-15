@@ -1,5 +1,4 @@
 #include "node/ros1/node.hpp"
-#include "core/map/map_io.hpp"
 #include "node/ros1/convert.hpp"
 #include "common/logger/logger.h"
 
@@ -11,23 +10,10 @@ RosGuiNode::RosGuiNode() {}
 
 RosGuiNode::~RosGuiNode() {}
 
-void RosGuiNode::PublishMapUpdate() {
-  MapManager* mm = MapManager::Instance();
-  if (mm && mm->IsMapAvailable()) {
-    nav_msgs::OccupancyGrid msg;
-    Convert(mm->GetMapData(), msg, mm->GetFrameId());
-    map_pub_.publish(msg);
-  }
-}
-
 bool RosGuiNode::Init(const AppConfig& app_config) {
   (void)app_config;
-  MapManager::Instance()->SetOnMapUpdateCallback([this]() { PublishMapUpdate(); });
-
   map_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>("/map_manager/map", 1, true);
   get_map_service_ = nh_.advertiseService("static_map", &RosGuiNode::GetMapCallback, this);
-
-  PublishMapUpdate();
   return true;
 }
 
@@ -81,6 +67,19 @@ bool RosGuiNode::PublishNavCancel() {
   return false;
 }
 
+bool RosGuiNode::PublishMap(const OccupancyGridData& map, const std::string& frame_id) {
+  {
+    std::lock_guard<std::mutex> lock(map_mu_);
+    map_data_ = map;
+    map_frame_id_ = frame_id;
+    map_available_ = true;
+  }
+  nav_msgs::OccupancyGrid msg;
+  Convert(map, msg, frame_id);
+  map_pub_.publish(msg);
+  return true;
+}
+
 bool RosGuiNode::LookupTransform(const std::string& target_frame, const std::string& source_frame,
     std::string* json_out, std::string* err) {
   (void)target_frame;
@@ -93,9 +92,9 @@ bool RosGuiNode::LookupTransform(const std::string& target_frame, const std::str
 }
 
 void RosGuiNode::GetMapCallback(nav_msgs::GetMap::Request&, nav_msgs::GetMap::Response& res) {
-  MapManager* mm = MapManager::Instance();
-  if (mm) {
-    Convert(mm->GetMapData(), res.map, mm->GetFrameId());
+  std::lock_guard<std::mutex> lock(map_mu_);
+  if (map_available_) {
+    Convert(map_data_, res.map, map_frame_id_);
   }
 }
 

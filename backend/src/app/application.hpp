@@ -19,13 +19,10 @@ class Application {
   void Stop();
 
  private:
-  std::string ParseConfigJsonPathFromArgs(int argc, char** argv) const;
-  int ParseWebServerPortFromArgs(int argc, char** argv) const;
-  std::string ParseWebServerDocumentRootFromArgs(int argc, char** argv) const;
-
   int argc_{0};
   char** argv_{nullptr};
   std::string config_json_path_;
+  std::string default_map_yaml_path_;
   int web_server_port_{8080};
   std::string web_server_document_root_;
   AppConfig settings_;

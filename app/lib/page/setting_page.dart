@@ -24,7 +24,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final Map<String, String> _settings = {};
   final GlobalKey _layersSectionKey = GlobalKey();
-  late TempConfigType _selectedTempConfigType;
   String _version = '';
   Orientation _selectedOrientation = Orientation.landscape;
 
@@ -34,7 +33,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadSettings();
     _loadVersion();
     _loadOrientation();
-    _selectedTempConfigType = globalSetting.tempConfig;
     if (widget.scrollToLayerSection) {
       _scheduleScrollToLayersSection();
     }
@@ -253,28 +251,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadSettings();
   }
 
-  Future<void> _applyTemplate(TempConfigType type) async {
-    switch (type) {
-      case TempConfigType.ROS2:
-        globalSetting.setDefaultCfgRos2();
-        break;
-      case TempConfigType.ROS1:
-        globalSetting.setDefaultCfgRos1();
-        break;
-    }
-    try {
-      await HttpChannel()
-          .saveGuiSettings(globalSetting.buildBackendGuiSettingsJson());
-    } catch (_) {}
-    setState(() {
-      _selectedTempConfigType = type;
-    });
-  }
-
   List<Widget> _buildSettingGroups() {
     return [
       _buildLanguageSection(),
-      _buildTempConfigTypeSection(),
       _buildBasicSection(),
       _buildBackendSettingsSection(),
       _buildLayersSection(),
@@ -327,80 +306,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveLanguage(String language) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', language);
-  }
-
-  Widget _buildTempConfigTypeSection() {
-    return _buildSection(
-      AppLocalizations.of(context)!.robot_type,
-      [
-        ListTile(
-          title: Text(AppLocalizations.of(context)!.default_config_template),
-          trailing: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(
-                color: Colors.grey.withOpacity(0.2),
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<TempConfigType>(
-                value: _selectedTempConfigType,
-                dropdownColor: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                elevation: 8,
-                isDense: true,
-                icon: const Icon(Icons.arrow_drop_down),
-                onChanged: (TempConfigType? newValue) {
-                  if (newValue != null) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title:
-                            Text(AppLocalizations.of(context)!.confirm_change),
-                        content: Text(AppLocalizations.of(context)!
-                            .switch_template_will_reset_all_settings),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(AppLocalizations.of(context)!.cancel),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              await _applyTemplate(newValue);
-                              if (context.mounted) {
-                                _loadSettings();
-                                setState(() {});
-                              }
-                            },
-                            child: Text(AppLocalizations.of(context)!.ok),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                },
-                items: TempConfigType.values
-                    .map<DropdownMenuItem<TempConfigType>>(
-                        (TempConfigType type) {
-                  return DropdownMenuItem<TempConfigType>(
-                    value: type,
-                    child: Text(
-                      tempConfigTypeToString(type),
-                      style: TextStyle(
-                        color: Colors.black87,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildSection(String title, List<Widget> children) {

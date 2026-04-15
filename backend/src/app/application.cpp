@@ -6,9 +6,9 @@
 #include "common/logger/logger.h"
 #include "node/node_manager.hpp"
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <cstring>
-#include <filesystem>
 namespace ros_gui_backend {
 
 namespace {
@@ -21,6 +21,7 @@ bpo::variables_map ParseCliOptions(int argc, char** argv) {
       ("config-json", bpo::value<std::string>(), "config json path")
       ("config", bpo::value<std::string>(), "compat alias of config-json")
       ("port", bpo::value<int>(), "web server port")
+      ("default-map", bpo::value<std::string>(), "default map yaml path")
       ("document-root", bpo::value<std::string>(), "web static document root");
   bpo::variables_map vm;
   bpo::store(bpo::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), vm);
@@ -39,42 +40,39 @@ Application::~Application() {
 bool Application::Initialize(int argc, char** argv) {
   argc_ = argc;
   argv_ = argv;
-  config_json_path_ = ParseConfigJsonPathFromArgs(argc, argv);
-  web_server_port_ = ParseWebServerPortFromArgs(argc, argv);
-  web_server_document_root_ = ParseWebServerDocumentRootFromArgs(argc, argv);
-  initialized_ = true;
-  return true;
-}
-
-std::string Application::ParseConfigJsonPathFromArgs(int argc, char** argv) const {
   const bpo::variables_map vm = ParseCliOptions(argc, argv);
   if (vm.count("config-json") > 0) {
-    return vm["config-json"].as<std::string>();
+    config_json_path_ = vm["config-json"].as<std::string>();
+  } else if (vm.count("config") > 0) {
+    config_json_path_ = vm["config"].as<std::string>();
+  } else {
+    config_json_path_.clear();
   }
-  if (vm.count("config") > 0) {
-    return vm["config"].as<std::string>();
-  }
-  return std::string();
-}
 
-int Application::ParseWebServerPortFromArgs(int argc, char** argv) const {
-  const bpo::variables_map vm = ParseCliOptions(argc, argv);
-  if (vm.count("port") == 0) {
-    return 8080;
+  if (vm.count("port") > 0) {
+    const int p = vm["port"].as<int>();
+    if (p >= 1 && p <= 65535) {
+      web_server_port_ = p;
+    } else {
+      web_server_port_ = 8080;
+    }
+  } else {
+    web_server_port_ = 8080;
   }
-  const int p = vm["port"].as<int>();
-  if (p >= 1 && p <= 65535) {
-    return p;
-  }
-  return 8080;
-}
 
-std::string Application::ParseWebServerDocumentRootFromArgs(int argc, char** argv) const {
-  const bpo::variables_map vm = ParseCliOptions(argc, argv);
   if (vm.count("document-root") > 0) {
-    return vm["document-root"].as<std::string>();
+    web_server_document_root_ = vm["document-root"].as<std::string>();
+  } else {
+    web_server_document_root_.clear();
   }
-  return std::string();
+
+  if (vm.count("default-map") > 0) {
+    default_map_yaml_path_ = vm["default-map"].as<std::string>();
+  } else {
+    default_map_yaml_path_.clear();
+  }
+  initialized_ = true;
+  return true;
 }
 
 void Application::Stop() {
@@ -91,7 +89,7 @@ int Application::Start() {
   }
   stopped_ = false;
 
-  namespace fs = std::filesystem;
+  namespace fs = boost::filesystem;
   const std::string gui_json_path =
       config_json_path_.empty() ? (fs::current_path() / "gui_app_settings.json").string() : config_json_path_;
   SetAppConfigStoragePath(gui_json_path);
@@ -108,10 +106,27 @@ int Application::Start() {
     Stop();
     return -1;
   }
+  if (!default_map_yaml_path_.empty()) {
+    OccupancyGridData default_map_data;
+    const LOAD_MAP_STATUS status = loadMapFromYaml(default_map_yaml_path_, default_map_data);
+    if (status != LOAD_MAP_SUCCESS) {
+      LOGGER_ERROR("Failed to load --default-map yaml: {}", default_map_yaml_path_);
+      Stop();
+      return -1;
+    }
+    mm->UpdateDefaultMap(default_map_data);
+    LOGGER_INFO("Loaded default map from {} to {}", default_map_yaml_path_, mm->GetMapDir("map"));
+  }
 
   if (!NodeManager::Instance()->InitNode()) {
     Stop();
     return -1;
+  }
+  if (mm->IsMapAvailable()) {
+    auto node = NodeManager::Instance()->GetNode();
+    if (node) {
+      node->PublishMap(mm->GetMapData(), mm->GetFrameId());
+    }
   }
 
   WebServer::SetSigintHook([]() {  NodeManager::Instance()->GetNode()->Shutdown(); });

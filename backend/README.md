@@ -80,6 +80,7 @@ export LD_LIBRARY_PATH=../lib:$LD_LIBRARY_PATH
 | `--config-json <path>` | AppConfig JSON 配置文件路径（默认 `./gui_app_settings.json`） |
 | `--config <path>` | 兼容别名，等同于 `--config-json` |
 | `--port <1-65535>` | HTTP 服务端口（默认 `8080`） |
+| `--default-map <path/to/map.yaml>` | 启动时加载指定地图 YAML，并写入 `~/.maps/map` 作为默认地图 |
 | `--document-root <path>` | 静态资源目录（未指定时默认 `<executable_dir>/dist`） |
 
 未指定 **`--config-json`** 时，默认读取当前目录下的 **`gui_app_settings.json`**。  

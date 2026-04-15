@@ -4,9 +4,7 @@
 #include "core/map/topology_map.hpp"
 #include "common/macros.h"
 
-#include <functional>
 #include <string>
-#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -15,28 +13,22 @@ namespace ros_gui_backend {
 using MapOperationResult = std::tuple<bool, std::string>;
 
 class MapManager {
- public:
-  using MapUpdateCallback = std::function<void()>;
-
  private:
   std::string ResolveCurrentMapYamlPath() const;
 
   std::string map_root_;
   std::string frame_id_;
   std::string topo_map_file_name_;
-  OccupancyGridData map_data_;
+  OccupancyGridData current_map_;
   TopologyMap topo_map_;
   bool map_available_;
   std::string default_tiles_dir_;
   int extra_zoom_levels_{5};
-  MapUpdateCallback on_map_update_cb_;
 
  public:
   ~MapManager();
 
   bool Initialize();
-
-  void SetOnMapUpdateCallback(MapUpdateCallback cb) { on_map_update_cb_ = std::move(cb); }
 
   std::string GetMapRoot() const;
   std::string GetMapDir(const std::string& map_name) const;
@@ -53,13 +45,12 @@ class MapManager {
   MapOperationResult ApplyMapEditFromQuery(const std::string& session_id, const std::string& map_name,
       const std::string& source_map_name, const std::string& topology_json,
       const std::string& obstacle_edits_json);
-  MapOperationResult ApplyTilesExtraZoomFromJson(std::string_view body_json);
+  MapOperationResult ApplyTilesExtraZoomFromJson(const std::string& body_json);
   MapOperationResult ApplyTilesExtraZoomForMapYaml(const std::string& map_name,
-      std::string_view body_json);
+      const std::string& body_json);
 
-  LOAD_MAP_STATUS LoadMapFromYaml(const std::string& yaml_file);
-  void UpdateMap(const OccupancyGridData& data);
-  void UpdateTopoMap(const TopologyMap& data);
+  LOAD_MAP_STATUS LoadMapFromYaml(const std::string& yaml_file, bool update_current_state = true);
+  void UpdateDefaultMap(const OccupancyGridData& data);
   void SetFrameId(const std::string& frame_id) { frame_id_ = frame_id; }
   void SetTopoMapFileName(const std::string& name) { topo_map_file_name_ = name; }
   std::string GetFrameId() const { return frame_id_; }
@@ -69,7 +60,7 @@ class MapManager {
   void SetExtraZoomLevels(int v) { extra_zoom_levels_ = v; }
   int GetExtraZoomLevels() const { return extra_zoom_levels_; }
 
-  const OccupancyGridData& GetMapData() const { return map_data_; }
+  const OccupancyGridData& GetMapData() const { return current_map_; }
   const TopologyMap& GetTopoMap() const { return topo_map_; }
 
   void RegenerateTiles(const std::string& output_dir);

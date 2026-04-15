@@ -55,6 +55,18 @@ std::string JsonErrorBody(const std::string& msg) {
   return j.dump();
 }
 
+void PublishCurrentMapIfAvailable() {
+  MapManager* map_manager = MapManager::Instance();
+  if (!map_manager || !map_manager->IsMapAvailable()) {
+    return;
+  }
+  auto node = NodeManager::Instance()->GetNode();
+  if (!node) {
+    return;
+  }
+  node->PublishMap(map_manager->GetMapData(), map_manager->GetFrameId());
+}
+
 std::string ExecutableDirectory() {
 #if defined(__linux__)
   char buf[4096];
@@ -499,6 +511,7 @@ void WebServer::RunImpl(WebServerConfig config) {
                 drogon::k500InternalServerError);
             return;
           }
+          PublishCurrentMapIfAvailable();
           json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
         }).detach();
       },
@@ -522,6 +535,7 @@ void WebServer::RunImpl(WebServerConfig config) {
             json_cb(std::move(callback), JsonErrorBody(err), HttpStatusForMapError(err));
             return;
           }
+          PublishCurrentMapIfAvailable();
           json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
         }).detach();
       },

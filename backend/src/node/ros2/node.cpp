@@ -1,5 +1,6 @@
 #include "node/ros2/node.hpp"
 #include "common/config/config.hpp"
+#include "core/map/map_manager.hpp"
 #include "core/map/map_io.hpp"
 #include "core/robot_stream/robot_message_hub.hpp"
 #include "node/ros2/convert.hpp"
@@ -125,16 +126,8 @@ RosGuiNode::RosGuiNode() : detail::RosGuiNodeRclInit(), rclcpp::Node("ros_gui_ap
 
 RosGuiNode::~RosGuiNode() {}
 
-void RosGuiNode::PublishMapUpdate() {
-  MapManager* mm = MapManager::Instance();
-  if (mm && mm->IsMapAvailable() && occ_pub_) {
-    occ_pub_->publish(OccGridPubMsg{mm->GetMapData(), mm->GetFrameId(), now()});
-  }
-}
-
 bool RosGuiNode::Init(const AppConfig& app_config) {
   gui_settings_ = app_config;
-  MapManager::Instance()->SetOnMapUpdateCallback([this]() { PublishMapUpdate(); });
 
   const std::string pub_topic = NormalizeTopicName(gui_settings_.MapPubTopic);
   const std::string sub_topic = NormalizeTopicName(gui_settings_.MapSubTopic);
@@ -175,7 +168,6 @@ bool RosGuiNode::Init(const AppConfig& app_config) {
   pose_timer_ =
       create_wall_timer(std::chrono::milliseconds(50), std::bind(&RosGuiNode::PoseTimerTick, this));
 
-  PublishMapUpdate();
   return true;
 }
 
@@ -189,25 +181,16 @@ void RosGuiNode::Shutdown() {
   rclcpp::shutdown();
 }
 
-bool RosGuiNode::LoadMapResponseFromYaml(const std::string& yaml_file,
-    std::shared_ptr<nav2_msgs::srv::LoadMap::Response> response) {
-  MapManager* map_manager = MapManager::Instance();
-  if (!map_manager) return false;
-  LOAD_MAP_STATUS status = map_manager->LoadMapFromYaml(yaml_file);
-  if (status == MAP_DOES_NOT_EXIST) {
-    response->result = nav2_msgs::srv::LoadMap::Response::RESULT_MAP_DOES_NOT_EXIST;
-    return false;
+bool RosGuiNode::PublishMap(const OccupancyGridData& map, const std::string& frame_id) {
+  {
+    std::lock_guard<std::mutex> lock(map_mu_);
+    map_data_ = map;
+    map_frame_id_ = frame_id;
+    map_available_ = true;
   }
-  if (status == INVALID_MAP_METADATA) {
-    response->result = nav2_msgs::srv::LoadMap::Response::RESULT_INVALID_MAP_METADATA;
-    return false;
+  if (occ_pub_) {
+    occ_pub_->publish(OccGridPubMsg{map, frame_id, now()});
   }
-  if (status == INVALID_MAP_DATA) {
-    response->result = nav2_msgs::srv::LoadMap::Response::RESULT_INVALID_MAP_DATA;
-    return false;
-  }
-  FillOccGridMsg(map_manager->GetMapData(), response->map, map_manager->GetFrameId(), now());
-  response->result = nav2_msgs::srv::LoadMap::Response::RESULT_SUCCESS;
   return true;
 }
 
@@ -215,9 +198,9 @@ void RosGuiNode::GetMapCallback(
     const std::shared_ptr<rmw_request_id_t>,
     const std::shared_ptr<nav_msgs::srv::GetMap::Request>,
     std::shared_ptr<nav_msgs::srv::GetMap::Response> response) {
-  MapManager* mm = MapManager::Instance();
-  if (mm) {
-    FillOccGridMsg(mm->GetMapData(), response->map, mm->GetFrameId(), now());
+  std::lock_guard<std::mutex> lock(map_mu_);
+  if (map_available_) {
+    FillOccGridMsg(map_data_, response->map, map_frame_id_, now());
   }
 }
 
@@ -225,12 +208,24 @@ void RosGuiNode::LoadMapCallback(
     const std::shared_ptr<rmw_request_id_t>,
     const std::shared_ptr<nav2_msgs::srv::LoadMap::Request> request,
     std::shared_ptr<nav2_msgs::srv::LoadMap::Response> response) {
-  if (LoadMapResponseFromYaml(request->map_url, response)) {
-    MapManager* mm = MapManager::Instance();
-    if (mm) {
-      occ_pub_->publish(OccGridPubMsg{mm->GetMapData(), mm->GetFrameId(), now()});
-    }
+  OccupancyGridData loaded_map;
+  LOAD_MAP_STATUS status = loadMapFromYaml(request->map_url, loaded_map);
+  if (status == MAP_DOES_NOT_EXIST) {
+    response->result = nav2_msgs::srv::LoadMap::Response::RESULT_MAP_DOES_NOT_EXIST;
+    return;
   }
+  if (status == INVALID_MAP_METADATA) {
+    response->result = nav2_msgs::srv::LoadMap::Response::RESULT_INVALID_MAP_METADATA;
+    return;
+  }
+  if (status == INVALID_MAP_DATA) {
+    response->result = nav2_msgs::srv::LoadMap::Response::RESULT_INVALID_MAP_DATA;
+    return;
+  }
+  const std::string frame_id = gui_settings_.MapManagerFrameId;
+  PublishMap(loaded_map, frame_id);
+  FillOccGridMsg(loaded_map, response->map, frame_id, now());
+  response->result = nav2_msgs::srv::LoadMap::Response::RESULT_SUCCESS;
 }
 
 void RosGuiNode::SaveMapCallback(
@@ -251,7 +246,14 @@ void RosGuiNode::SaveMapCallback(
 }
 
 void RosGuiNode::RawOccMapUpdateCallback(const std::shared_ptr<OccupancyGridData> msg) {
-  MapManager::Instance()->UpdateMap(*msg);
+  if (!msg) {
+    return;
+  }
+  MapManager::Instance()->UpdateDefaultMap(*msg);
+  std::lock_guard<std::mutex> lock(map_mu_);
+  map_data_ = *msg;
+  map_frame_id_ = gui_settings_.MapManagerFrameId;
+  map_available_ = true;
 }
 
 bool RosGuiNode::SaveMapTopicToFile(const std::string& map_topic,

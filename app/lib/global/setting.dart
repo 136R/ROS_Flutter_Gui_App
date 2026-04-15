@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -86,16 +85,6 @@ class Setting {
   Future<bool> init() async {
     prefs = await SharedPreferences.getInstance();
     _initialized = true;
-
-    // 获取应用版本
-    PackageInfo packageInfo = await PackageInfo.fromPlatform();
-    String currentVersion = packageInfo.version;
-
-    if (!prefs.containsKey("version") ||
-        prefs.getString("version") != currentVersion) {
-      setDefaultCfgRos2();
-      prefs.setString("version", currentVersion);
-    }
 
     // 从配置中加载手柄映射
     await _loadGamepadMapping();
