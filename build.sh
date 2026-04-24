@@ -1,11 +1,13 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env sh
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -eu
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 BACKEND="${ROOT}/backend"
 APP="${ROOT}/app"
 PROTO_ROOT="${ROOT}/protocol"
 PB_OUT="${APP}/lib/protobuf"
+CLI_ARGS="$*"
 
 cd "${ROOT}"
 
@@ -21,16 +23,13 @@ if ! command -v protoc-gen-dart >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -d "${PROTO_ROOT}" ]]; then
+if [ ! -d "${PROTO_ROOT}" ]; then
   echo "error: protocol directory missing: ${PROTO_ROOT}" >&2
   exit 1
 fi
 
-
-shopt -s nullglob
-mapfile -t PROTO_FILES < <(find "${PROTO_ROOT}" -maxdepth 1 -name '*.proto' -print | sort)
-shopt -u nullglob
-if [[ ${#PROTO_FILES[@]} -eq 0 ]]; then
+set -- "${PROTO_ROOT}"/*.proto
+if [ ! -e "$1" ]; then
   echo "error: no .proto files under ${PROTO_ROOT}" >&2
   exit 1
 fi
@@ -39,7 +38,7 @@ mkdir -p "${PB_OUT}"
 protoc --experimental_allow_proto3_optional \
   -I"${PROTO_ROOT}" \
   --dart_out="${PB_OUT}" \
-  "${PROTO_FILES[@]}"
+  "$@"
 echo "[build] Dart protobuf -> ${PB_OUT}"
 
 if ! command -v flutter >/dev/null 2>&1; then
@@ -55,5 +54,10 @@ rm -rf "${INSTALL_BIN_DIST}"
 mkdir -p "${INSTALL_BIN_DIST}"
 cp -a "${APP}/build/web/." "${INSTALL_BIN_DIST}/"
 
-bash "${ROOT}/backend/build.sh" "$@"
+if [ -n "${CLI_ARGS}" ]; then
+  # shellcheck disable=SC2086
+  sh "${ROOT}/backend/build.sh" ${CLI_ARGS}
+else
+  sh "${ROOT}/backend/build.sh"
+fi
 echo "[build] backend done (${BACKEND}/build)"

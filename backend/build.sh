@@ -1,7 +1,8 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env sh
 
-BACKEND_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -eu
+
+BACKEND_ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "${BACKEND_ROOT}"
 
 sudo apt-get install libsdl2-dev libsdl2-image-dev libc-ares-dev -y
