@@ -1,5 +1,6 @@
 #include "common/config/config.hpp"
 
+#include <algorithm>
 #include <boost/filesystem.hpp>
 #include <fstream>
 
@@ -40,7 +41,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
     SSHPort,
     SSHUsername,
     SSHPassword,
-    SSHQuickCommands)
+    SSHQuickCommands,
+    MapTileFreeColor,
+    MapTileOccColor,
+    MapTileUnknownColor,
+    MapTileFreeThresh,
+    MapTileOccThresh)
 
 void SetAppConfigStoragePath(std::string path) {
   RootConfig::Instance()->SetStoragePath(std::move(path));
@@ -73,6 +79,27 @@ void AppConfigMergeJson(const nlohmann::json& j, AppConfig* s) {
   *s = merged.get<AppConfig>();
 }
 
+namespace {
+
+int GrayToArgb(int gray) {
+  const int g = std::max(0, std::min(gray, 255));
+  return 0xFF000000 | (g << 16) | (g << 8) | g;
+}
+
+void MigrateLegacyMapTileGray(const nlohmann::json& j, AppConfig* s) {
+  if (!j.contains("MapTileFreeColor") && j.contains("MapTileFreeGray")) {
+    s->MapTileFreeColor = GrayToArgb(j["MapTileFreeGray"].get<int>());
+  }
+  if (!j.contains("MapTileOccColor") && j.contains("MapTileOccGray")) {
+    s->MapTileOccColor = GrayToArgb(j["MapTileOccGray"].get<int>());
+  }
+  if (!j.contains("MapTileUnknownColor") && j.contains("MapTileUnknownGray")) {
+    s->MapTileUnknownColor = GrayToArgb(j["MapTileUnknownGray"].get<int>());
+  }
+}
+
+}  // namespace
+
 bool LoadAppConfigFile(AppConfig* s) {
   const std::string path = RootConfig::Instance()->ResolvedStoragePath();
   std::ifstream ifs(path);
@@ -83,6 +110,7 @@ bool LoadAppConfigFile(AppConfig* s) {
   try {
     nlohmann::json j = nlohmann::json::parse(raw);
     AppConfigMergeJson(j, s);
+    MigrateLegacyMapTileGray(j, s);
     return true;
   } catch (const std::exception&) {
     return false;

@@ -1287,11 +1287,11 @@ class _MainFlamePageState extends State<MainFlamePage> {
     );
   }
 
-  Color _getFreeAreaColor() => const Color(0xFFFFFFFF);
+  Color _getFreeAreaColor() => globalSetting.mapTileFreeColor;
 
-  Color _getOccupiedAreaColor() => const Color(0xFF3C3C3C);
+  Color _getOccupiedAreaColor() => globalSetting.mapTileOccColor;
 
-  Color _getUnknownAreaColor() => const Color.fromRGBO(205, 205, 205, 1);
+  Color _getUnknownAreaColor() => globalSetting.mapTileUnknownColor;
 
   @override
   void dispose() {

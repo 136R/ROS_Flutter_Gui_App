@@ -108,7 +108,7 @@ class HttpChannel {
     return Map<String, dynamic>.from(jsonDecode(res.body) as Map);
   }
 
-  Future<void> saveGuiSettings(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> saveGuiSettings(Map<String, dynamic> body) async {
     final uri = _buildUri('/api/settings');
     final res = await http.post(
       uri,
@@ -118,6 +118,7 @@ class HttpChannel {
     if (res.statusCode != 200) {
       throw Exception('api/settings POST ${res.statusCode} ${res.body}');
     }
+    return Map<String, dynamic>.from(jsonDecode(res.body) as Map);
   }
 
   Future<bool> postRobotNavGoal(double x, double y, double yaw,

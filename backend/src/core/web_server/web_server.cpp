@@ -281,6 +281,11 @@ void WebServer::RunImpl(WebServerConfig config) {
           return;
         }
         RootConfig::Instance()->MutableApp() = s;
+        MapManager* mm = MapManager::Instance();
+        const std::string cur = mm->GetCurrentMapName();
+        if (!cur.empty()) {
+          mm->RegenerateTiles(mm->GetTilesDir(cur));
+        }
         if (auto node = NodeManager::Instance()->GetNode()) {
           node->ReloadGuiStreams(s);
         }

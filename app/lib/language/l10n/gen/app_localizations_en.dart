@@ -576,6 +576,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legend_unknown => 'Unknown';
 
   @override
+  String get map_tile_colors => 'Map Colors';
+
+  @override
+  String get map_tile_free_thresh => 'Free threshold';
+
+  @override
+  String get map_tile_occ_thresh => 'Occupied threshold';
+
+  @override
   String get nav_goal => 'Nav Goal';
 
   @override

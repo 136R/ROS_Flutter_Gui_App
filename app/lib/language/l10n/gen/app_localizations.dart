@@ -1166,6 +1166,24 @@ abstract class AppLocalizations {
   /// **'未知'**
   String get legend_unknown;
 
+  /// No description provided for @map_tile_colors.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图颜色'**
+  String get map_tile_colors;
+
+  /// No description provided for @map_tile_free_thresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'自由阈值'**
+  String get map_tile_free_thresh;
+
+  /// No description provided for @map_tile_occ_thresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'障碍阈值'**
+  String get map_tile_occ_thresh;
+
   /// No description provided for @nav_goal.
   ///
   /// In zh, this message translates to:

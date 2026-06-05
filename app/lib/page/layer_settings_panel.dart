@@ -1,61 +1,233 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ros_flutter_gui_app/basic/layer_config.dart';
+import 'package:ros_flutter_gui_app/global/setting.dart';
 import 'package:ros_flutter_gui_app/language/l10n/gen/app_localizations.dart';
 import 'package:ros_flutter_gui_app/provider/global_state.dart';
+import 'package:ros_flutter_gui_app/provider/http_channel.dart';
 
-Future<Color?> pickPresetColor(BuildContext context, Color current) async {
-  const presets = <Color>[
-    Colors.red,
-    Colors.deepOrange,
-    Colors.orange,
-    Colors.amber,
-    Colors.yellow,
-    Colors.lime,
-    Colors.green,
-    Colors.teal,
-    Colors.cyan,
-    Colors.lightBlue,
-    Colors.blue,
-    Colors.indigo,
-    Colors.purple,
-    Colors.pink,
-    Colors.white,
-    Colors.black54,
-  ];
+Future<Color?> pickColor(
+  BuildContext context,
+  Color current, {
+  String? title,
+}) async {
   return showDialog<Color>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(AppLocalizations.of(ctx)!.layers),
+    builder: (ctx) => _ColorPickerDialog(
+      initialColor: current,
+      title: title ?? AppLocalizations.of(ctx)!.layer_color,
+    ),
+  );
+}
+
+class _ColorPickerDialog extends StatefulWidget {
+  const _ColorPickerDialog({
+    required this.initialColor,
+    required this.title,
+  });
+
+  final Color initialColor;
+  final String title;
+
+  @override
+  State<_ColorPickerDialog> createState() => _ColorPickerDialogState();
+}
+
+class _ColorPickerDialogState extends State<_ColorPickerDialog> {
+  static const double _svHeight = 120;
+  static const double _hueBarHeight = 22;
+
+  late HSVColor _hsv;
+
+  double _panelWidth(BuildContext context) {
+    final screenW = MediaQuery.sizeOf(context).width;
+    return (screenW * 0.82).clamp(220.0, 280.0);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _hsv = HSVColor.fromColor(widget.initialColor);
+  }
+
+  void _updateSv(Offset local, double width, double height) {
+    if (width <= 0 || height <= 0) return;
+    final s = (local.dx / width).clamp(0.0, 1.0);
+    final v = (1.0 - local.dy / height).clamp(0.0, 1.0);
+    setState(() {
+      _hsv = _hsv.withSaturation(s).withValue(v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final picked = _hsv.toColor();
+    final hex = Setting.normalizeArgb(picked.toARGB32())
+        .toRadixString(16)
+        .padLeft(8, '0')
+        .substring(2);
+
+    final panelWidth = _panelWidth(context);
+
+    return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      title: Text(widget.title),
+      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       content: SizedBox(
-        width: 280,
-        child: Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: presets.map((c) {
-            return InkWell(
-              onTap: () => Navigator.pop(ctx, c),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: c,
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
+        width: panelWidth,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: panelWidth,
+                  height: _svHeight,
+                  child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final h = constraints.maxHeight;
+                    return Listener(
+                      behavior: HitTestBehavior.opaque,
+                      onPointerDown: (e) => _updateSv(e.localPosition, w, h),
+                      onPointerMove: (e) => _updateSv(e.localPosition, w, h),
+                      child: Stack(
+                        clipBehavior: Clip.hardEdge,
+                        children: [
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: HSVColor.fromAHSV(1, _hsv.hue, 1, 1)
+                                  .toColor(),
+                            ),
+                          ),
+                          const Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colors.white, Color(0x00FFFFFF)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0x00000000), Colors.black],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: (_hsv.saturation * w - 8)
+                                .clamp(0.0, w - 16),
+                            top: ((1 - _hsv.value) * h - 8)
+                                .clamp(0.0, h - 16),
+                            child: IgnorePointer(
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                        color: Colors.black38, blurRadius: 2),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  ),
                 ),
               ),
-            );
-          }).toList(),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: _hueBarHeight,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: List<Color>.generate(
+                              7,
+                              (i) => HSVColor.fromAHSV(1, i * 60.0, 1, 1)
+                                  .toColor(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: _hueBarHeight,
+                        activeTrackColor: Colors.transparent,
+                        inactiveTrackColor: Colors.transparent,
+                        overlayShape: SliderComponentShape.noOverlay,
+                        thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 8),
+                      ),
+                      child: Slider(
+                        value: _hsv.hue.clamp(0.0, 360.0),
+                        min: 0,
+                        max: 360,
+                        onChanged: (h) =>
+                            setState(() => _hsv = _hsv.withHue(h)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: picked,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '#${hex.toUpperCase()}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(AppLocalizations.of(ctx)!.cancel),
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, picked),
+          child: Text(l10n.ok),
         ),
       ],
-    ),
-  );
+    );
+  }
 }
 
 class LayerSettingsPanel extends StatefulWidget {
@@ -67,8 +239,13 @@ class LayerSettingsPanel extends StatefulWidget {
 
 class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
   late double _laserDotDraft;
+  late int _mapTileFreeColorDraft;
+  late int _mapTileOccColorDraft;
+  late int _mapTileUnknownColorDraft;
+  late int _mapTileFreeThreshDraft;
+  late int _mapTileOccThreshDraft;
 
-  final Set<String> _openLayerIds = <String>{};
+  final Set<String> _openLayerIds = <String>{'mapColors'};
 
   static const _dividerColor = Color(0x33000000);
 
@@ -77,6 +254,26 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
     super.initState();
     _laserDotDraft = Provider.of<GlobalState>(context, listen: false)
         .layerLaserDotRadius();
+    _mapTileFreeColorDraft = globalSetting.MapTileFreeColor;
+    _mapTileOccColorDraft = globalSetting.MapTileOccColor;
+    _mapTileUnknownColorDraft = globalSetting.MapTileUnknownColor;
+    _mapTileFreeThreshDraft = globalSetting.MapTileFreeThresh;
+    _mapTileOccThreshDraft = globalSetting.MapTileOccThresh;
+  }
+
+  Future<void> _saveMapTileSetting(BuildContext context, String key, dynamic value) async {
+    try {
+      final out = await HttpChannel().saveGuiSettings({key: value});
+      globalSetting.applyBackendGuiSettings(out);
+      globalSetting.notifyMapTileStyleChanged();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), duration: const Duration(seconds: 3)),
+        );
+      }
+      rethrow;
+    }
   }
 
   void _toggleOpen(String id) {
@@ -97,6 +294,43 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
         ),
       ),
       child: child,
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required String id,
+    required String title,
+  }) {
+    final open = _openLayerIds.contains(id);
+    return _groupRowBorder(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _toggleOpen(id),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  open ? Icons.expand_less : Icons.chevron_right,
+                  size: 20,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -169,6 +403,107 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
     );
   }
 
+  Widget _buildMapTileColorRow(
+    BuildContext context, {
+    required String label,
+    required int argb,
+    required String configKey,
+    required ValueChanged<int> onDraftChanged,
+  }) {
+    final color = Color(Setting.normalizeArgb(argb));
+    return _groupRowBorder(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            final picked = await pickColor(context, color,
+                title: AppLocalizations.of(context)!.map_tile_colors);
+            if (picked == null || !context.mounted) return;
+            final next = Setting.normalizeArgb(picked.toARGB32());
+            try {
+              await _saveMapTileSetting(context, configKey, next);
+            } catch (_) {
+              return;
+            }
+            if (!context.mounted) return;
+            onDraftChanged(next);
+            setState(() {});
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(fontSize: 16, color: Colors.black),
+                  ),
+                ),
+                Container(
+                  width: 44,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(6),
+                    border:
+                        Border.all(color: Colors.grey.withValues(alpha: 0.35)),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapTileThreshRow(
+    BuildContext context, {
+    required String label,
+    required int value,
+    required String configKey,
+    required ValueChanged<int> onDraftChanged,
+  }) {
+    return _groupRowBorder(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 72,
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Expanded(
+              child: Slider.adaptive(
+                value: value.toDouble(),
+                min: 0,
+                max: 100,
+                divisions: 100,
+                label: '$value',
+                onChanged: (v) => onDraftChanged(v.round()),
+                onChangeEnd: (v) =>
+                    _saveMapTileSetting(context, configKey, v.round()),
+              ),
+            ),
+            SizedBox(
+              width: 32,
+              child: Text(
+                '$value',
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildColorRow(
     BuildContext context,
     GlobalState gs,
@@ -182,7 +517,7 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            final p = await pickPresetColor(context, c);
+            final p = await pickColor(context, c);
             if (p != null) {
               gs.patchLayer(layerId, colorArgb: p.toARGB32().toString());
               await gs.saveLayerSettings();
@@ -227,6 +562,45 @@ class _LayerSettingsPanelState extends State<LayerSettingsPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _buildSectionHeader(
+            id: 'mapColors', title: l10n.map_tile_colors),
+        if (_openLayerIds.contains('mapColors')) ...[
+          _buildMapTileColorRow(
+            context,
+            label: l10n.legend_free,
+            argb: _mapTileFreeColorDraft,
+            configKey: 'MapTileFreeColor',
+            onDraftChanged: (v) => setState(() => _mapTileFreeColorDraft = v),
+          ),
+          _buildMapTileColorRow(
+            context,
+            label: l10n.legend_occupied,
+            argb: _mapTileOccColorDraft,
+            configKey: 'MapTileOccColor',
+            onDraftChanged: (v) => setState(() => _mapTileOccColorDraft = v),
+          ),
+          _buildMapTileColorRow(
+            context,
+            label: l10n.legend_unknown,
+            argb: _mapTileUnknownColorDraft,
+            configKey: 'MapTileUnknownColor',
+            onDraftChanged: (v) => setState(() => _mapTileUnknownColorDraft = v),
+          ),
+          _buildMapTileThreshRow(
+            context,
+            label: l10n.map_tile_free_thresh,
+            value: _mapTileFreeThreshDraft,
+            configKey: 'MapTileFreeThresh',
+            onDraftChanged: (v) => setState(() => _mapTileFreeThreshDraft = v),
+          ),
+          _buildMapTileThreshRow(
+            context,
+            label: l10n.map_tile_occ_thresh,
+            value: _mapTileOccThreshDraft,
+            configKey: 'MapTileOccThresh',
+            onDraftChanged: (v) => setState(() => _mapTileOccThreshDraft = v),
+          ),
+        ],
         _buildLayerHeader(context,
             id: 'grid', title: l10n.layer_grid, layerKey: 'grid'),
         _buildLayerHeader(context,

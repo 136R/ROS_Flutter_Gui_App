@@ -91,6 +91,7 @@ class TileMapState extends State<TileMap> {
   bool _robotFollowListenerAttached = false;
   bool _topologyListenerAttached = false;
   bool _manualRefreshListenerAttached = false;
+  bool _mapTileStyleListenerAttached = false;
   Timer? _autoRefreshTimer;
   int _tileCacheBuster = DateTime.now().millisecondsSinceEpoch ~/ 5000;
 
@@ -108,6 +109,7 @@ class TileMapState extends State<TileMap> {
     _syncRobotFollowListener();
     _syncTopologyListener();
     _syncManualRefreshListener();
+    _syncMapTileStyleListener();
   }
 
   @override
@@ -203,6 +205,20 @@ class TileMapState extends State<TileMap> {
     _topologyMap.value = notifier.value;
   }
 
+  void _syncMapTileStyleListener() {
+    if (!_mapTileStyleListenerAttached) {
+      globalSetting.MapTileStyleEpoch.addListener(_onMapTileStyleChanged);
+      _mapTileStyleListenerAttached = true;
+    }
+  }
+
+  void _onMapTileStyleChanged() {
+    if (!mounted) return;
+    setState(() {
+      _tileCacheBuster = DateTime.now().millisecondsSinceEpoch;
+    });
+  }
+
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
@@ -210,6 +226,10 @@ class TileMapState extends State<TileMap> {
     if (_manualRefreshListenerAttached && _manualCtrlRef != null) {
       _manualCtrlRef!.removeListener(_onManualControlChanged);
       _manualRefreshListenerAttached = false;
+    }
+    if (_mapTileStyleListenerAttached) {
+      globalSetting.MapTileStyleEpoch.removeListener(_onMapTileStyleChanged);
+      _mapTileStyleListenerAttached = false;
     }
     if (_robotFollowListenerAttached && _wsChannelRef != null) {
       _wsChannelRef!.robotPoseMap.removeListener(_onRobotPoseForFollow);
@@ -378,7 +398,7 @@ class TileMapState extends State<TileMap> {
           child: FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              backgroundColor: const Color.fromRGBO(205, 205, 205, 1),
+              backgroundColor: globalSetting.mapTileUnknownColor,
               crs: crs,
               initialCameraFit: CameraFit.bounds(
                 bounds: mapBounds,

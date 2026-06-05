@@ -45,6 +45,11 @@ struct AppConfig {
   std::string SSHUsername;
   std::string SSHPassword;
   std::vector<SshQuickCommandEntry> SSHQuickCommands;
+  int MapTileFreeColor = 0xFFFFFFFF;
+  int MapTileOccColor = 0xFF000000;
+  int MapTileUnknownColor = 0xFFCDCDCD;
+  int MapTileFreeThresh = 25;
+  int MapTileOccThresh = 65;
 };
 
 void AppConfigToJson(const AppConfig& s, nlohmann::json* out);

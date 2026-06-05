@@ -55,6 +55,12 @@ class Setting {
   String SSHUsername = '';
   String SSHPassword = '';
   List<SshQuickCmd> SSHQuickCommands = [];
+  int MapTileFreeColor = 0xFFFFFFFF;
+  int MapTileOccColor = 0xFF000000;
+  int MapTileUnknownColor = 0xFFCDCDCD;
+  int MapTileFreeThresh = 25;
+  int MapTileOccThresh = 65;
+  final ValueNotifier<int> MapTileStyleEpoch = ValueNotifier(0);
 
 // 定义一个映射关系，将Dart中的类名映射到JavaScript中的类名
   Map<String, JoyStickEvent> axisMapping = {
@@ -358,7 +364,66 @@ class Setting {
     } else {
       SSHQuickCommands = [];
     }
+    MapTileFreeColor = _parseMapTileColor(
+      j['MapTileFreeColor'],
+      j['MapTileFreeGray'],
+      0xFFFFFFFF,
+    );
+    MapTileOccColor = _parseMapTileColor(
+      j['MapTileOccColor'],
+      j['MapTileOccGray'],
+      0xFF000000,
+    );
+    MapTileUnknownColor = _parseMapTileColor(
+      j['MapTileUnknownColor'],
+      j['MapTileUnknownGray'],
+      0xFFCDCDCD,
+    );
+    MapTileFreeThresh = _parseOccThresh(j['MapTileFreeThresh'], 25);
+    MapTileOccThresh = _parseOccThresh(j['MapTileOccThresh'], 65);
   }
+
+  int _parseOccThresh(dynamic raw, int fallback) {
+    if (raw is int) return raw.clamp(0, 100);
+    if (raw != null) {
+      final n = int.tryParse('$raw');
+      if (n != null) return n.clamp(0, 100);
+    }
+    return fallback;
+  }
+
+  static int normalizeArgb(int value) => value & 0xFFFFFFFF;
+
+  void notifyMapTileStyleChanged() {
+    MapTileStyleEpoch.value++;
+  }
+
+  int _parseMapTileColor(dynamic colorRaw, dynamic grayRaw, int fallback) {
+    if (colorRaw is int) return normalizeArgb(colorRaw);
+    if (colorRaw is double) return normalizeArgb(colorRaw.toInt());
+    if (colorRaw != null) {
+      final n = int.tryParse('$colorRaw');
+      if (n != null) return normalizeArgb(n);
+    }
+    if (grayRaw is int) {
+      final g = grayRaw.clamp(0, 255);
+      return Color.fromRGBO(g, g, g, 1).toARGB32();
+    }
+    if (grayRaw != null) {
+      final n = int.tryParse('$grayRaw');
+      if (n != null) {
+        final g = n.clamp(0, 255);
+        return Color.fromRGBO(g, g, g, 1).toARGB32();
+      }
+    }
+    return fallback;
+  }
+
+  Color get mapTileFreeColor => Color(normalizeArgb(MapTileFreeColor));
+
+  Color get mapTileOccColor => Color(normalizeArgb(MapTileOccColor));
+
+  Color get mapTileUnknownColor => Color(normalizeArgb(MapTileUnknownColor));
 
   bool get sshCredentialsConfigured =>
       robotIp.trim().isNotEmpty &&
@@ -403,6 +468,11 @@ class Setting {
       'SSHUsername': SSHUsername,
       'SSHPassword': SSHPassword,
       'SSHQuickCommands': SSHQuickCommands.map((e) => e.toJson()).toList(),
+      'MapTileFreeColor': MapTileFreeColor,
+      'MapTileOccColor': MapTileOccColor,
+      'MapTileUnknownColor': MapTileUnknownColor,
+      'MapTileFreeThresh': MapTileFreeThresh,
+      'MapTileOccThresh': MapTileOccThresh,
     };
   }
 

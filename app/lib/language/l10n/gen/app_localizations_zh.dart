@@ -571,6 +571,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get legend_unknown => '未知';
 
   @override
+  String get map_tile_colors => '地图颜色';
+
+  @override
+  String get map_tile_free_thresh => '自由阈值';
+
+  @override
+  String get map_tile_occ_thresh => '障碍阈值';
+
+  @override
   String get nav_goal => '导航目标';
 
   @override

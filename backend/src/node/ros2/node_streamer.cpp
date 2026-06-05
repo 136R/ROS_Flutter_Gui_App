@@ -49,6 +49,18 @@ Pose2 TfToPose2(const geometry_msgs::msg::Transform& t) {
 
 bool LookupLatestTfPose(tf2_ros::Buffer& buf, const std::string& target_frame, const std::string& source_frame,
     Pose2* out, std::string* err) {
+  if (!out) {
+    if (err) {
+      *err = "output pose is null";
+    }
+    return false;
+  }
+  if (target_frame.empty() || source_frame.empty()) {
+    if (err) {
+      *err = "empty tf frame";
+    }
+    return false;
+  }
   try {
     auto st = buf.lookupTransform(target_frame, source_frame, tf2::TimePointZero);
     *out = TfToPose2(st.transform);
@@ -160,13 +172,23 @@ void FillPathInMapFrame(const std::string& map_frame, const nav_msgs::msg::Path&
 }  // namespace
 
 void RosGuiNode::PoseTimerTick() {
+  if (!tf_buffer_) {
+    return;
+  }
+  std::string map_frame;
+  std::string base_link_frame;
+  {
+    std::lock_guard<std::mutex> lk(stream_mu_);
+    map_frame = gui_settings_.MapFrameName;
+    base_link_frame = gui_settings_.BaseLinkFrameName;
+  }
   Pose2 pose{};
   std::string e;
-  if (!LookupLatestTfPose(*tf_buffer_, gui_settings_.MapFrameName, gui_settings_.BaseLinkFrameName, &pose, &e)) {
+  if (!LookupLatestTfPose(*tf_buffer_, map_frame, base_link_frame, &pose, &e)) {
     return;
   }
   ros_gui_backend::pb::RobotMessage out;
-  FillPoseStampedMap(gui_settings_.MapFrameName, now(), pose, out.mutable_robot_pose_map());
+  FillPoseStampedMap(map_frame, now(), pose, out.mutable_robot_pose_map());
   BroadcastRobotMsg(out);
 }
 

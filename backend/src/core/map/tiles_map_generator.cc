@@ -1,5 +1,6 @@
 #include "core/map/tiles_map_generator.h"
 
+#include "common/config/config.hpp"
 #include "common/logger/logger.h"
 
 #include <opencv2/opencv.hpp>
@@ -13,17 +14,42 @@ namespace ros_gui_backend {
 
 namespace {
 
-constexpr uint8_t kFreeVal = 254;
-constexpr uint8_t kOccVal = 0;
-constexpr uint8_t kUnknownVal = 205;
-constexpr int kFreeThresh = 25;
-constexpr int kOccThresh = 65;
+struct MapTileStyle {
+  cv::Vec3b free_bgr;
+  cv::Vec3b occ_bgr;
+  cv::Vec3b unknown_bgr;
+  int free_thresh = 25;
+  int occ_thresh = 65;
+};
 
-uint8_t MapCellToGray(int8_t cell) {
-  if (cell < 0 || cell > 100) return kUnknownVal;
-  if (cell <= kFreeThresh) return kFreeVal;
-  if (cell >= kOccThresh) return kOccVal;
-  return kUnknownVal;
+int ClampThresh(int v) {
+  return std::max(0, std::min(v, 100));
+}
+
+cv::Vec3b ArgbToBgr(int argb) {
+  const uint32_t v = static_cast<uint32_t>(argb);
+  const uint8_t r = static_cast<uint8_t>((v >> 16) & 0xFF);
+  const uint8_t g = static_cast<uint8_t>((v >> 8) & 0xFF);
+  const uint8_t b = static_cast<uint8_t>(v & 0xFF);
+  return cv::Vec3b(b, g, r);
+}
+
+MapTileStyle LoadMapTileStyle() {
+  const AppConfig cfg = RootConfig::Instance()->App();
+  return {
+      ArgbToBgr(cfg.MapTileFreeColor),
+      ArgbToBgr(cfg.MapTileOccColor),
+      ArgbToBgr(cfg.MapTileUnknownColor),
+      ClampThresh(cfg.MapTileFreeThresh),
+      ClampThresh(cfg.MapTileOccThresh),
+  };
+}
+
+cv::Vec3b MapCellToBgr(int8_t cell, const MapTileStyle& style) {
+  if (cell < 0 || cell > 100) return style.unknown_bgr;
+  if (cell <= style.free_thresh) return style.free_bgr;
+  if (cell >= style.occ_thresh) return style.occ_bgr;
+  return style.unknown_bgr;
 }
 
 }  // namespace
@@ -55,6 +81,7 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
       world_max_y);
   LOGGER_INFO("TilesGen: max_zoom={} padded={}x{}", max_z, padded_w, padded_h);
 
+  const MapTileStyle tile_style = LoadMapTileStyle();
   int scale = 1 << extra_zoom_levels;
 
   auto SamplePadded = [&](uint32_t pc, uint32_t pr) -> int8_t {
@@ -103,8 +130,7 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
             sx = std::max(0, std::min(sx, static_cast<int>(padded_w) - 1));
             sy = std::max(0, std::min(sy, static_cast<int>(padded_h) - 1));
             int8_t cell = SamplePadded(static_cast<uint32_t>(sx), static_cast<uint32_t>(sy));
-            uint8_t v = MapCellToGray(cell);
-            tile.at<cv::Vec3b>(ty, tx) = cv::Vec3b(v, v, v);
+            tile.at<cv::Vec3b>(ty, tx) = MapCellToBgr(cell, tile_style);
           }
         }
 
