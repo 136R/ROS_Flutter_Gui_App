@@ -22,6 +22,8 @@ import 'package:ros_flutter_gui_app/page/setting_page.dart';
 import 'package:ros_flutter_gui_app/page/ssh_quick_commands_page.dart';
 import 'package:ros_flutter_gui_app/page/ssh_terminal_page.dart';
 import 'package:ros_flutter_gui_app/page/ssh_widgets.dart';
+import 'package:ros_flutter_gui_app/page/task_card.dart';
+import 'package:ros_flutter_gui_app/provider/task_channel.dart';
 
 class MainFlamePage extends StatefulWidget {
   @override
@@ -54,6 +56,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
       if (!mounted) return;
       context.read<GlobalState>().loadLayerSettings();
       _setupDiagnosticListener();
+      context.read<TaskChannel>().start();   // 1Hz 轮询任务层的 :8090
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -345,6 +348,9 @@ class _MainFlamePageState extends State<MainFlamePage> {
                   _buildCameraWidget(context, theme),
                   _buildGamepadWidget(context, theme),
                   _buildMapLegend(context, theme),
+                  // 底部居中的任务卡（垃圾桶召唤状态 + 「我倒完了」按钮）。
+                  // 待命时它自己整张隐藏，不占地方。
+                  const TaskCard(),
                 ],
               );
             },
@@ -1295,6 +1301,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
 
   @override
   void dispose() {
+    context.read<TaskChannel>().stop();
     super.dispose();
   }
 }

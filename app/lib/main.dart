@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:ros_flutter_gui_app/page/main_page.dart';
 import 'package:ros_flutter_gui_app/page/connect_page.dart';
 import 'package:ros_flutter_gui_app/provider/http_channel.dart';
+import 'package:ros_flutter_gui_app/provider/task_channel.dart';
 import 'package:ros_flutter_gui_app/provider/ws_channel.dart';
 import 'package:ros_flutter_gui_app/page/setting_page.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -39,6 +40,8 @@ void main() async {
   runApp(MultiProvider(providers: [
     Provider<WsChannel>(create: (_) => WsChannel()),
     Provider<HttpChannel>(create: (_) => HttpChannel()),
+    // 任务层（my_bot_task）自己的 HTTP 口，和 GUI 后端不是一个进程
+    Provider<TaskChannel>(create: (_) => TaskChannel()),
     ChangeNotifierProvider<GlobalState>(create: (_) => GlobalState()),
   ], child: MyApp()));
 }

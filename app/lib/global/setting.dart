@@ -513,6 +513,30 @@ class Setting {
     return "http://$host:$httpServerPort";
   }
 
+  /// 任务层（ROS 侧的 my_bot_task）的 HTTP 口。
+  /// 和 GUI 后端(8080)【不是同一个进程】—— 任务层自己开的口，见
+  /// dev_ws/src/my_bot_task/docs/README.md。
+  String get taskServerPort {
+    final p = _prefsOrNull;
+    return p?.getString("taskServerPort") ?? "8090";
+  }
+
+  void setTaskServerPort(String port) {
+    final p = _prefsOrNull;
+    if (p == null) return;
+    final t = port.trim();
+    if (t.isEmpty || t == "8090") {
+      p.remove("taskServerPort");
+    } else {
+      p.setString("taskServerPort", t);
+    }
+  }
+
+  String get taskServerUrl {
+    final host = prefs.getString("robotIp") ?? "127.0.0.1";
+    return "http://$host:$taskServerPort";
+  }
+
   String get imagePort {
     return prefs.getString("imagePort") ?? "8080";
   }
