@@ -34,6 +34,18 @@ class MapManager {
   bool has_pending_default_map_update_{false};
   OccupancyGridData wait_handle_default_map_;
 
+  // 上一次真正落盘的默认地图指纹。
+  //
+  // slam_toolbox 每 map_update_interval(默认 1s) 就重发一次 /map，哪怕地图一个像素
+  // 都没变（localization 模式下它本来就是静态的）。而 ProcessDefaultMapUpdate 原本
+  // 无条件重写 pgm + 重新生成【全部】瓦片 —— 实测 167x142 的小图要生成 1365 张瓦片、
+  // 耗时约 0.75s，也就是常驻吃掉约 3/4 个核，并且每秒把 5.7MB 重写一遍
+  // （约 476 GB/天）。开发机上只是浪费，写到机器人的 SD 卡上是会真的写坏卡的。
+  //
+  // 所以这里记住上次的内容指纹，没变就整个跳过。
+  // 只被 worker 线程读写（ProcessDefaultMapUpdate 里），天然无竞争，不用加锁。
+  size_t last_default_map_fp_{0};
+
   void DefaultMapUpdateWorkerLoop();
   void ProcessDefaultMapUpdate(const OccupancyGridData& data);
 

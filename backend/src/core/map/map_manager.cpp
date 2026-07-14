@@ -7,8 +7,10 @@
 
 #include <boost/filesystem.hpp>
 #include <condition_variable>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <functional>
 #include <mutex>
 #include <sstream>
 #include <thread>
@@ -358,24 +360,64 @@ void MapManager::DefaultMapUpdateWorkerLoop() {
   }
 }
 
+namespace {
+
+// 默认地图的内容指纹。必须覆盖【所有影响落盘产物的字段】——少算一个，那个字段变了
+// 就会被静默跳过（地图在盘上悄悄停留在旧版）。
+size_t DefaultMapFingerprint(const OccupancyGridData& d) {
+  size_t h = 1469598103934665603ull;  // FNV-1a 64 offset basis
+  auto mix = [&h](size_t v) {
+    h ^= v + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2);
+  };
+  mix(std::hash<uint32_t>{}(d.width));
+  mix(std::hash<uint32_t>{}(d.height));
+  mix(std::hash<double>{}(d.resolution));
+  mix(std::hash<double>{}(d.origin_x));
+  mix(std::hash<double>{}(d.origin_y));
+  mix(std::hash<double>{}(d.origin_yaw));
+  mix(std::hash<double>{}(d.free_thresh));
+  mix(std::hash<double>{}(d.occupied_thresh));
+  // 栅格本身。167x142 ≈ 23k 格，走一遍是微秒级的事，比重新生成 1365 张瓦片便宜四个数量级
+  for (const int8_t c : d.data) {
+    mix(static_cast<size_t>(static_cast<uint8_t>(c)));
+  }
+  return h;
+}
+
+}  // namespace
+
 void MapManager::ProcessDefaultMapUpdate(const OccupancyGridData& data) {
   const std::string default_map_name = "map";
-  fs::create_directories(fs::path(GetTilesDir(default_map_name)));
-  SaveParameters save_params;
-  save_params.map_file_name = GetMapDir(default_map_name) + "/map";
-  save_params.image_format = "pgm";
-  save_params.free_thresh = 0.25;
-  save_params.occupied_thresh = 0.65;
-  save_params.mode = MapMode::Trinary;
-  if (!saveMapToFile(data, save_params)) {
-    LOGGER_ERROR("Failed to persist default map to {}", save_params.map_file_name);
-    return;
-  }
-  TilesMapGenerator gen;
-  if (gen.GenerateAllTilesToDir(data, GetTilesDir(default_map_name), extra_zoom_levels_)) {
-    LOGGER_INFO("Default map tiles regenerated to {}", GetTilesDir(default_map_name));
+
+  // slam_toolbox 每秒重发一次 /map，哪怕内容一个像素没变（localization 下地图本就是
+  // 静态的）。落盘和重新生成瓦片是这里唯一昂贵的事，内容没变就整个跳过。
+  // 详见 map_manager.hpp 里 last_default_map_fp_ 的注释。
+  //
+  // 初值 0 保证【首次必然不同】，所以启动时照常生成一次，GUI 不会没图。
+  const size_t fp = DefaultMapFingerprint(data);
+  if (fp != last_default_map_fp_) {
+    fs::create_directories(fs::path(GetTilesDir(default_map_name)));
+    SaveParameters save_params;
+    save_params.map_file_name = GetMapDir(default_map_name) + "/map";
+    save_params.image_format = "pgm";
+    save_params.free_thresh = 0.25;
+    save_params.occupied_thresh = 0.65;
+    save_params.mode = MapMode::Trinary;
+    if (!saveMapToFile(data, save_params)) {
+      LOGGER_ERROR("Failed to persist default map to {}", save_params.map_file_name);
+      return;  // 没落盘就别更新指纹，下一帧还得重试
+    }
+    last_default_map_fp_ = fp;
+
+    TilesMapGenerator gen;
+    if (gen.GenerateAllTilesToDir(data, GetTilesDir(default_map_name), extra_zoom_levels_)) {
+      LOGGER_INFO("Default map tiles regenerated to {}", GetTilesDir(default_map_name));
+    }
   }
 
+  // ⚠️ 这一段【不能】跟着上面一起跳过。
+  // 用户切到别的地图再切回来时，current_map_ 已经被那张图覆盖了 —— 哪怕 /map 的内容
+  // 一个像素没变，也必须把它重新指回实时地图，否则 GUI 拿到的是上一张图的数据。
   const std::string current_name = GetCurrentMapName();
   if (current_name.empty() || current_name == default_map_name) {
     current_map_ = data;
