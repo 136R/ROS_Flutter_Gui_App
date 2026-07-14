@@ -387,6 +387,9 @@ class _MapEditPageState extends State<MapEditPage> {
             mapName: _currEditMapName,
           );
           if (!mounted) return;
+          // 后端原地重写了瓦片（URL 不变），推进 epoch 让 TileLayer 的 ?_ts= 变一下，
+          // 否则浏览器一直吃缓存、画笔要手动硬刷新才看得见。
+          globalSetting.MapTileStyleEpoch.value++;
           await _reloadCurrentMapData(mapName: _currEditMapName);
           toastification.show(
             context: context,
@@ -471,6 +474,7 @@ class _MapEditPageState extends State<MapEditPage> {
         mapName: name,
         sourceMapName: _currEditMapName,
       );
+      globalSetting.MapTileStyleEpoch.value++;   // 同上：让新图的瓦片立刻重新拉取
       await _reloadCurrentMapData(mapName: name);
       if (!mounted) return;
       toastification.show(
