@@ -389,13 +389,18 @@ size_t DefaultMapFingerprint(const OccupancyGridData& d) {
 void MapManager::ProcessDefaultMapUpdate(const OccupancyGridData& data) {
   const std::string default_map_name = "map";
 
-  // slam_toolbox 每秒重发一次 /map，哪怕内容一个像素没变（localization 下地图本就是
-  // 静态的）。落盘和重新生成瓦片是这里唯一昂贵的事，内容没变就整个跳过。
-  // 详见 map_manager.hpp 里 last_default_map_fp_ 的注释。
-  //
-  // 初值 0 保证【首次必然不同】，所以启动时照常生成一次，GUI 不会没图。
+  // 两道闸，都在 map_manager.hpp 的成员注释里详述：
+  //   ① 内容指纹：一个像素没变就跳过（localization 静止时 slam 每秒重发同一张图）
+  //   ② 限流：内容变了、但距上次重生成不足 5s，也跳过（导航移动时地图每秒变十几个格子）
+  // 初值：fp==0 保证首次必生成（GUI 不会没图）；regen_ 的 epoch 初值远早于 now，
+  //       所以首帧的限流判断天然为假，不会误拦第一次。
   const size_t fp = DefaultMapFingerprint(data);
-  if (fp != last_default_map_fp_) {
+  const auto now = std::chrono::steady_clock::now();
+  const bool content_changed = (fp != last_default_map_fp_);
+  const bool throttled =
+      (last_default_map_fp_ != 0) && (now - last_default_map_regen_ < kDefaultMapMinRegenInterval);
+
+  if (content_changed && !throttled) {
     fs::create_directories(fs::path(GetTilesDir(default_map_name)));
     SaveParameters save_params;
     save_params.map_file_name = GetMapDir(default_map_name) + "/map";
@@ -403,17 +408,23 @@ void MapManager::ProcessDefaultMapUpdate(const OccupancyGridData& data) {
     save_params.free_thresh = 0.25;
     save_params.occupied_thresh = 0.65;
     save_params.mode = MapMode::Trinary;
-    if (!saveMapToFile(data, save_params)) {
+    // verbose=false：镜像每次落盘的那几条 per-call 日志会刷屏，这里只在重生成后
+    // 打一行摘要。用户主动存图走默认 verbose=true，日志照常有。
+    if (!saveMapToFile(data, save_params, /*verbose=*/false)) {
       LOGGER_ERROR("Failed to persist default map to {}", save_params.map_file_name);
-      return;  // 没落盘就别更新指纹，下一帧还得重试
+      return;  // 没落盘就别更新指纹/时间戳，下一帧还得重试
     }
     last_default_map_fp_ = fp;
+    last_default_map_regen_ = now;
 
     TilesMapGenerator gen;
-    if (gen.GenerateAllTilesToDir(data, GetTilesDir(default_map_name), extra_zoom_levels_)) {
-      LOGGER_INFO("Default map tiles regenerated to {}", GetTilesDir(default_map_name));
+    if (gen.GenerateAllTilesToDir(data, GetTilesDir(default_map_name), extra_zoom_levels_,
+                                  /*verbose=*/false)) {
+      LOGGER_INFO("Default map mirror refreshed -> {}", GetTilesDir(default_map_name));
     }
   }
+  // content_changed 但 throttled 时，【故意不更新】last_default_map_fp_ —— 这样限流窗口
+  // 一过，下一帧的指纹仍然对不上、就会重生成，镜像最终收敛到最新（最多滞后一个窗口）。
 
   // ⚠️ 这一段【不能】跟着上面一起跳过。
   // 用户切到别的地图再切回来时，current_map_ 已经被那张图覆盖了 —— 哪怕 /map 的内容

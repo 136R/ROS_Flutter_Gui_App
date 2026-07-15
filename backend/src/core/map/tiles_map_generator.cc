@@ -62,7 +62,7 @@ int TilesMapGenerator::GetMaxZoom(uint32_t width, uint32_t height, int extra_zoo
 }
 
 bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
-    const std::string& output_dir, int extra_zoom_levels) {
+    const std::string& output_dir, int extra_zoom_levels, bool verbose) {
   if (map.width == 0 || map.height == 0 || map.data.empty()) return false;
 
   int max_z = GetMaxZoom(map.width, map.height, extra_zoom_levels);
@@ -74,12 +74,14 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
   double world_max_x = map.origin_x + map.width * map.resolution;
   double world_max_y = map.origin_y + map.height * map.resolution;
 
-  LOGGER_INFO(
-      "TilesGen: map {}x{} res={} origin=({},{}) extra_zoom_levels={}", map.width, map.height,
-      map.resolution, map.origin_x, map.origin_y, extra_zoom_levels);
-  LOGGER_INFO("TilesGen: world bounds x=[{},{}] y=[{},{}]", world_min_x, world_max_x, world_min_y,
-      world_max_y);
-  LOGGER_INFO("TilesGen: max_zoom={} padded={}x{}", max_z, padded_w, padded_h);
+  if (verbose) {
+    LOGGER_INFO(
+        "TilesGen: map {}x{} res={} origin=({},{}) extra_zoom_levels={}", map.width, map.height,
+        map.resolution, map.origin_x, map.origin_y, extra_zoom_levels);
+    LOGGER_INFO("TilesGen: world bounds x=[{},{}] y=[{},{}]", world_min_x, world_max_x, world_min_y,
+        world_max_y);
+    LOGGER_INFO("TilesGen: max_zoom={} padded={}x{}", max_z, padded_w, padded_h);
+  }
 
   const MapTileStyle tile_style = LoadMapTileStyle();
   int scale = 1 << extra_zoom_levels;
@@ -159,7 +161,9 @@ bool TilesMapGenerator::GenerateAllTilesToDir(const OccupancyGridData& map,
       LOGGER_WARN("TilesGen: cleanup backup dir failed {}, err={}", backup_dir.string(), e.what());
     }
   }
-  LOGGER_INFO("TilesGen: total {} tiles written to {}", total, output_dir);
+  if (verbose) {
+    LOGGER_INFO("TilesGen: total {} tiles written to {}", total, output_dir);
+  }
   return total > 0;
 }
 

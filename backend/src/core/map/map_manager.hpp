@@ -7,6 +7,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -45,6 +46,15 @@ class MapManager {
   // 所以这里记住上次的内容指纹，没变就整个跳过。
   // 只被 worker 线程读写（ProcessDefaultMapUpdate 里），天然无竞争，不用加锁。
   size_t last_default_map_fp_{0};
+
+  // 限流：机器人【移动】时 slam 会持续微调地图（localization 下每秒也变十几个格子），
+  // 那时地图真的在变，指纹每帧都不同 → 会退回每秒重生成 1365 张瓦片。
+  // 但那个镜像只在 mapping 模式给 save_map.sh 当复制源，导航时根本没人读它。所以移动时
+  // 把重生成限到【最多每 5 秒一次】—— 静止(待命/等待)仍是 0 次，移动时降 80%。
+  // 代价：导航时 GUI 的实时地图最多滞后 5s 刷新（用户不会盯着看它挪，无感）。
+  // 机器人停下后，地图稳定，最多 5s 内镜像收敛到最终状态（save_map.sh 存图前地图早稳了）。
+  std::chrono::steady_clock::time_point last_default_map_regen_{};
+  static constexpr std::chrono::seconds kDefaultMapMinRegenInterval{5};
 
   void DefaultMapUpdateWorkerLoop();
   void ProcessDefaultMapUpdate(const OccupancyGridData& data);

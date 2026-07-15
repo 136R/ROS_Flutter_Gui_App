@@ -527,11 +527,16 @@ static void WritePngOrBmp(const OccupancyGridData& map,
 
 void tryWriteMapToFile(
     const OccupancyGridData &map,
-    const SaveParameters &save_parameters) {
-  LOGGER_INFO("Received a {} X {} map @ {} m/pix", map.width, map.height, map.resolution);
+    const SaveParameters &save_parameters,
+    bool verbose) {
+  if (verbose) {
+    LOGGER_INFO("Received a {} X {} map @ {} m/pix", map.width, map.height, map.resolution);
+  }
 
   std::string mapdatafile = save_parameters.map_file_name + "." + save_parameters.image_format;
-  LOGGER_INFO("Writing map occupancy data to {}", mapdatafile);
+  if (verbose) {
+    LOGGER_INFO("Writing map occupancy data to {}", mapdatafile);
+  }
   if (save_parameters.image_format == "pgm") {
     WritePgm(map, save_parameters, mapdatafile);
   } else {
@@ -561,15 +566,20 @@ void tryWriteMapToFile(
       LOGGER_ERROR("YAML writer failed with an error {}. The map metadata may be invalid.", e.GetLastError());
     }
 
-    LOGGER_INFO("Writing map metadata to {}", mapmetadatafile);
+    if (verbose) {
+      LOGGER_INFO("Writing map metadata to {}", mapmetadatafile);
+    }
     std::ofstream(mapmetadatafile) << e.c_str();
   }
-  LOGGER_INFO("Map saved");
+  if (verbose) {
+    LOGGER_INFO("Map saved");
+  }
 }
 
 bool saveMapToFile(
     const OccupancyGridData &map,
-    const SaveParameters &save_parameters) {
+    const SaveParameters &save_parameters,
+    bool verbose) {
   // Local copy of SaveParameters that might be modified by checkSaveParameters()
   SaveParameters save_parameters_loc = save_parameters;
 
@@ -577,7 +587,7 @@ bool saveMapToFile(
     // Checking map parameters for consistency
     checkSaveParameters(save_parameters_loc);
 
-    tryWriteMapToFile(map, save_parameters_loc);
+    tryWriteMapToFile(map, save_parameters_loc, verbose);
   } catch (std::exception &e) {
     LOGGER_ERROR("Failed to write map for reason: {}", e.what());
     return false;

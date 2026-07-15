@@ -73,9 +73,12 @@ struct SaveParameters
   MapMode mode{MapMode::Trinary};
 };
 
+// verbose=false 时不打 "Received/Writing/Map saved" 那几条 per-call 日志。
+// 默认地图镜像每秒都在存，走 false 免得刷屏；用户主动存图走默认 true，日志有用。
 bool saveMapToFile(
   const OccupancyGridData & map,
-  const SaveParameters & save_parameters);
+  const SaveParameters & save_parameters,
+  bool verbose = true);
 
 std::string expand_user_home_dir_if_needed(
   std::string yaml_filename,
