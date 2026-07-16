@@ -12,6 +12,10 @@
 .svn/
 migrate_working_dir/
 *.lock
+# 应用（非 library）要提交 pubspec.lock 锁定依赖版本，否则 CI 每次 clean clone 都会
+# free-resolve 到当天最新的兼容版本，可能引入破坏性 API 变更（比如 dartssh2 2.22.2
+# 加了 SSHSocket.flush()，导致自定义的 _SshOverWsSocket 编译不过）。
+!pubspec.lock
 # IntelliJ related
 *.iml
 *.ipr
