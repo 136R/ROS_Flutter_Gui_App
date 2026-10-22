@@ -5,6 +5,7 @@
 #include "common/logger/logger.h"
 #include "core/map/json.hpp"
 
+#include <algorithm>
 #include <boost/filesystem.hpp>
 #include <condition_variable>
 #include <cstdint>
@@ -136,6 +137,36 @@ static bool ReadMapMetaFromYaml(const std::string& yaml_path, double& resolution
   return false;
 }
 
+// 禁行区单独存成 <name>/<name>_keepout.{pgm,yaml}：与原图同尺寸，画笔涂过的格子 100、其余 0。
+// Nav2 的 keepout 掩码直接读它；原图 <name>.pgm 不再被画笔改动。
+static std::string KeepoutYamlPath(const std::string& map_yaml_path) {
+  const size_t pos = map_yaml_path.rfind(".yaml");
+  return map_yaml_path.substr(0, pos) + "_keepout.yaml";
+}
+
+// 读禁行区层；文件不存在或尺寸与原图不一致都返回 false（调用方当作没有禁行区）。
+static bool LoadKeepoutLayer(const std::string& keepout_yaml, const OccupancyGridData& base,
+    OccupancyGridData& out) {
+  if (!fs::exists(keepout_yaml)) return false;
+  OccupancyGridData layer;
+  if (loadMapFromYaml(keepout_yaml, layer) != LOAD_MAP_SUCCESS) return false;
+  if (layer.width != base.width || layer.height != base.height) {
+    LOGGER_WARN("keepout layer {} size {}x{} != map {}x{}, ignored", keepout_yaml, layer.width,
+        layer.height, base.width, base.height);
+    return false;
+  }
+  out = std::move(layer);
+  return true;
+}
+
+// 显示用：原图 + 禁行区叠成一张（瓦片和 current_map_ 都用它，app 上看到的和以前一样）
+static void OverlayKeepout(OccupancyGridData& map, const OccupancyGridData& keepout) {
+  if (keepout.data.size() != map.data.size()) return;
+  for (size_t i = 0; i < map.data.size(); ++i) {
+    if (keepout.data[i] == 100) map.data[i] = 100;
+  }
+}
+
 static std::vector<std::string> GetAllMapNames(const std::string& map_root) {
   std::vector<std::string> names;
   try {
@@ -198,9 +229,9 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
   std::string base_dir = GetMapDir(map_name);
   try {
     const std::string yaml_path = base_dir + "/" + map_name + ".yaml";
+    const std::string source_name = source_map_name.empty() ? GetCurrentMapName() : source_map_name;
     OccupancyGridData target_map_data;
     if (loadMapFromYaml(yaml_path, target_map_data) != LOAD_MAP_SUCCESS) {
-      std::string source_name = source_map_name.empty() ? GetCurrentMapName() : source_map_name;
       if (source_name.empty()) {
         return {false, "map not found"};
       }
@@ -208,6 +239,15 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
       if (loadMapFromYaml(source_yaml_path, target_map_data) != LOAD_MAP_SUCCESS) {
         return {false, "map not found"};
       }
+    }
+    // 禁行区层：目标图自己的 → 源图的（「另存为」带走禁行区）→ 全空
+    OccupancyGridData keepout;
+    if (!LoadKeepoutLayer(KeepoutYamlPath(yaml_path), target_map_data, keepout) &&
+        (source_name.empty() ||
+            !LoadKeepoutLayer(KeepoutYamlPath(GetMapDir(source_name) + "/" + source_name + ".yaml"),
+                target_map_data, keepout))) {
+      keepout = target_map_data;
+      std::fill(keepout.data.begin(), keepout.data.end(), 0);
     }
     fs::create_directories(fs::path(base_dir));
     if (!fs::exists(GetTilesDir(map_name))) {
@@ -231,10 +271,11 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
         LOGGER_ERROR("Invalid cell index: {} error: {}", key, e.what());
         continue;
       }
-      if (cell_index < 0 || static_cast<size_t>(cell_index) >= target_map_data.data.size()) {
+      if (cell_index < 0 || static_cast<size_t>(cell_index) >= keepout.data.size()) {
         continue;
       }
-      target_map_data.data[static_cast<size_t>(cell_index)] = edit_value;
+      // 画笔只改禁行区层：涂 = 100，擦 = 0（擦不掉原图里的墙，导航也不认）
+      keepout.data[static_cast<size_t>(cell_index)] = edit_value > 0 ? 100 : 0;
       LOGGER_INFO("Apply obstacle edit cell_index={} edit_value={}", cell_index,
           static_cast<int>(edit_value));
     }
@@ -248,15 +289,22 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
     if (!saveMapToFile(target_map_data, save_params)) {
       return {false, "failed to save map"};
     }
+    SaveParameters keepout_params = save_params;
+    keepout_params.map_file_name = map_file_base + "_keepout";
+    if (!saveMapToFile(keepout, keepout_params)) {
+      return {false, "failed to save keepout"};
+    }
     auto topology_obj = nlohmann::json::parse(topology_json).get<TopologyMap>();
     saveTopologyMapToJson(topology_obj, map_file_base + ".topology");
+    OccupancyGridData display_map = target_map_data;
+    OverlayKeepout(display_map, keepout);
     TilesMapGenerator gen;
-    if (!gen.GenerateAllTilesToDir(target_map_data, GetTilesDir(map_name), extra_zoom_levels_)) {
+    if (!gen.GenerateAllTilesToDir(display_map, GetTilesDir(map_name), extra_zoom_levels_)) {
       return {false, "failed to regenerate tiles"};
     }
     const bool is_current_map = (map_name == GetCurrentMapName());
     if (is_current_map) {
-      current_map_ = target_map_data;
+      current_map_ = display_map;
       topo_map_ = topology_obj;
       map_available_ = true;
     }
@@ -325,6 +373,10 @@ LOAD_MAP_STATUS MapManager::LoadMapFromYaml(const std::string& yaml_file, bool u
     json_file.replace(pos, 5, ".topology");
   }
   if (update_current_state) {
+    OccupancyGridData keepout;
+    if (LoadKeepoutLayer(KeepoutYamlPath(yaml_file), loaded_map, keepout)) {
+      OverlayKeepout(loaded_map, keepout);
+    }
     topo_map_file_name_ = json_file;
     LoadTopologyMapFromJson(json_file, topo_map_);
     current_map_ = loaded_map;
