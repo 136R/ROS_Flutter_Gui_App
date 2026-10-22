@@ -142,13 +142,15 @@ class _MapEditPageState extends State<MapEditPage> {
                   obstacleBrushSizeMeters: _obstacleBrushSizeMeters,
                 onObstacleEditEnd: (oldEdits, newEdits) {
                   if (oldEdits.isEmpty && newEdits.isEmpty) return;
-                  _commandManager.executeCommand(
-                    ObstacleEditCommand(
-                      _tileMapKey,
-                      oldEdits,
-                      newEdits,
-                    ),
-                  );
+                  setState(() {   // 让工具栏的撤销按钮跟着变亮
+                    _commandManager.executeCommand(
+                      ObstacleEditCommand(
+                        _tileMapKey,
+                        oldEdits,
+                        newEdits,
+                      ),
+                    );
+                  });
                 },
                   selectedNavPointName: selectedNavPoint?.name,
                   selectedRoute: _selectedRoute,

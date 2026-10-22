@@ -175,7 +175,7 @@ void WebServer::RunImpl(WebServerConfig config) {
     std::string path = tiles_dir + "/" + z + "/" + x + "/" + y + ".png";
     std::ifstream ifs(path, std::ios::binary);
     if (!ifs) {
-      LOGGER_WARN("Tile not found z={} x={} y={} path={}", z, x, y, path);
+      // 不打日志：打开页面的瞬间前端还没拿到 max_zoom，会按默认 z=13 请求一批，属正常现象
       plain_cb(std::move(callback), "Not found", drogon::k404NotFound);
       return;
     }

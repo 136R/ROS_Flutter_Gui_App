@@ -487,7 +487,9 @@ class TileMapState extends State<TileMap> {
         final value = entry.value;
         // value 0 表示清除；100 表示障碍物。
         // 为了让“原图障碍”也能被覆盖，这里要显式存储 0。
-        if (value == 0 || value > 0) {
+        if (value < 0) {
+          _obstacleEdits.remove(key);   // -1 = 这一笔之前本没改动：撤销后不发这一格，磁盘上原样保留
+        } else {
           _obstacleEdits[key] = value;
         }
       }
@@ -541,7 +543,7 @@ class TileMapState extends State<TileMap> {
         final prev = hasPrev ? (_obstacleEdits[key] as int) : 0;
         if (hasPrev && prev == value) continue;
 
-        _obstacleStrokeOldEdits[key] ??= prev;
+        _obstacleStrokeOldEdits[key] ??= hasPrev ? prev : -1;
         _obstacleEdits[key] = value;
         _obstacleStrokeNewEdits[key] = value;
         changed = true;

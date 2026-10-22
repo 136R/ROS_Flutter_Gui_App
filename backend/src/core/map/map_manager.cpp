@@ -272,6 +272,7 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
     if (!obstacle_edits.is_object()) {
       return {false, "obstacle_edits_json must be a JSON object"};
     }
+    size_t painted = 0, erased = 0;
     for (auto it = obstacle_edits.begin(); it != obstacle_edits.end(); ++it) {
       const std::string key = it.key();
       if (!it.value().is_number_integer()) {
@@ -291,9 +292,9 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
       }
       // 画笔只改禁行区层：涂 = 100，擦 = 0（擦不掉原图里的墙，导航也不认）
       keepout.data[static_cast<size_t>(cell_index)] = edit_value > 0 ? 100 : 0;
-      LOGGER_INFO("Apply obstacle edit cell_index={} edit_value={}", cell_index,
-          static_cast<int>(edit_value));
+      ++(edit_value > 0 ? painted : erased);
     }
+    LOGGER_INFO("map edit map_name={} painted={} erased={}", map_name, painted, erased);
     SaveParameters save_params;
     std::string map_file_base = base_dir + "/" + map_name;
     save_params.map_file_name = map_file_base;
