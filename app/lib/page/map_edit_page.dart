@@ -71,6 +71,8 @@ class _MapEditPageState extends State<MapEditPage> {
         ? await httpChannel.getCurrentMap()
         : mapName;
     final topo = await httpChannel.getTopologyMap(mapName: targetName);
+    // 换到别的图：撤销记录里的画笔是上一张图的格子编号，一并作废（画笔本身由 TileMap 清）
+    if (targetName != _currEditMapName) _commandManager.clear();
     _currEditMapName=targetName;
     mapManager.updateTopologyMap(topo);
     if (!mounted) return;
@@ -387,6 +389,9 @@ class _MapEditPageState extends State<MapEditPage> {
             mapName: _currEditMapName,
           );
           if (!mounted) return;
+          // 画笔已写进禁行区和瓦片：清掉叠加层，否则下次保存会重发（越积越大）；保存即存档点，撤销记录一并清
+          _tileMapKey.currentState?.clearObstacleEdits();
+          _commandManager.clear();
           // 后端原地重写了瓦片（URL 不变），推进 epoch 让 TileLayer 的 ?_ts= 变一下，
           // 否则浏览器一直吃缓存、画笔要手动硬刷新才看得见。
           globalSetting.MapTileStyleEpoch.value++;
@@ -474,6 +479,8 @@ class _MapEditPageState extends State<MapEditPage> {
         mapName: name,
         sourceMapName: _currEditMapName,
       );
+      _tileMapKey.currentState?.clearObstacleEdits();   // 同上
+      _commandManager.clear();
       globalSetting.MapTileStyleEpoch.value++;   // 同上：让新图的瓦片立刻重新拉取
       await _reloadCurrentMapData(mapName: name);
       if (!mounted) return;

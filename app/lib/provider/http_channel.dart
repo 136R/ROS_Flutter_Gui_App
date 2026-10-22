@@ -83,17 +83,19 @@ class HttpChannel {
         .map((cellIndex, value) => MapEntry(cellIndex.toString(), value));
     final topologyJson = topologyMap.toJson();
     topologyJson['map_name'] = name;
-    final uri = _buildUri(
-      '/saveMapEdit',
-      queryParameters: <String, String>{
+    // POST 正文：画笔放网址里超过 64KB 后端会拒（414）
+    final uri = _buildUri('/saveMapEdit');
+    final res = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json; charset=utf-8'},
+      body: jsonEncode({
         'session_id': editSessionId,
         'map_name': name,
         'source_map_name': sourceMapName ?? name,
-        'topology_json': jsonEncode(topologyJson),
-        'obstacle_edits_json': jsonEncode(obstacleEditsJson),
-      },
+        'topology': topologyJson,
+        'obstacle_edits': obstacleEditsJson,
+      }),
     );
-    final res = await http.get(uri);
     if (res.statusCode != 200) {
       throw Exception('saveMapEdit failed: ${res.statusCode} ${res.body}');
     }

@@ -516,11 +516,19 @@ void WebServer::RunImpl(WebServerConfig config) {
   drogon::app().registerHandler(
       "/saveMapEdit",
       [&json_cb](const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) {
-        const std::string session_id = req->getParameter("session_id");
-        const std::string map_name = req->getParameter("map_name");
-        const std::string source_map_name = req->getParameter("source_map_name");
-        const std::string topology_json = req->getParameter("topology_json");
-        const std::string obstacle_edits_json = req->getParameter("obstacle_edits_json");
+        // POST JSON 正文：画笔放网址里超过 64KB 会被 drogon 拒（414），正文上限 1MB
+        std::string session_id, map_name, source_map_name, topology_json, obstacle_edits_json;
+        try {
+          const auto j = nlohmann::json::parse(req->getBody());
+          session_id = j.at("session_id").get<std::string>();
+          map_name = j.at("map_name").get<std::string>();
+          source_map_name = j.value("source_map_name", std::string());
+          topology_json = j.at("topology").dump();
+          obstacle_edits_json = j.at("obstacle_edits").dump();
+        } catch (const std::exception&) {
+          json_cb(std::move(callback), JsonErrorBody("invalid json body"), drogon::k400BadRequest);
+          return;
+        }
         std::thread([session_id, map_name, source_map_name, topology_json, obstacle_edits_json,
                         callback = std::move(callback), &json_cb]() mutable {
           std::lock_guard<std::mutex> lock(g_map_op_mutex);
@@ -535,7 +543,7 @@ void WebServer::RunImpl(WebServerConfig config) {
           json_cb(std::move(callback), "{\"result\":\"ok\"}", drogon::k200OK);
         }).detach();
       },
-      {Get});
+      {Post});
 
   drogon::app().registerHandler(
       "/tiles/",

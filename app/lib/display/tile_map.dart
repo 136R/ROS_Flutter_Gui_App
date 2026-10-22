@@ -119,6 +119,10 @@ class TileMapState extends State<TileMap> {
     _syncTopologyListener();
     _syncManualRefreshListener();
     if (oldWidget.mapName != widget.mapName) {
+      // 画笔按上一张图的格子编号记录，带到新图会落在错误位置
+      _obstacleEdits.clear();
+      _obstacleStrokeOldEdits.clear();
+      _obstacleStrokeNewEdits.clear();
       _syncMapDataFromWidget();
     }
     if (widget.followRobot && !oldWidget.followRobot) {
