@@ -46,6 +46,9 @@ drogon::HttpStatusCode HttpStatusForMapError(const std::string& err) {
   if (err == "failed to save map") {
     return drogon::k500InternalServerError;
   }
+  if (err == "map already exists") {
+    return drogon::k409Conflict;
+  }
   return drogon::k400BadRequest;
 }
 

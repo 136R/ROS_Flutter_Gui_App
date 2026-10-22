@@ -6,6 +6,7 @@
 #include "core/map/json.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <boost/filesystem.hpp>
 #include <condition_variable>
 #include <cstdint>
@@ -226,7 +227,21 @@ MapOperationResult MapManager::ApplyMapEditFromQuery(const std::string& session_
   if (session_id.empty() || map_name.empty() || topology_json.empty() || obstacle_edits_json.empty()) {
     return {false, "missing query params"};
   }
+  // "map" 是实时镜像的保留名；带 / 或 .. 会写出 ~/.maps；空白字符让 launch 和脚本难以引用
+  const bool bad_name = map_name == "map" || map_name.find('/') != std::string::npos ||
+      map_name.find("..") != std::string::npos ||
+      std::any_of(map_name.begin(), map_name.end(),
+          [](char ch) { return std::isspace(static_cast<unsigned char>(ch)); });
+  if (bad_name) {
+    return {false, "invalid map_name"};
+  }
   std::string base_dir = GetMapDir(map_name);
+  // 源图名 ≠ 目标名 = 另存为 / 新建；目标已存在就拒绝，否则会套用目标的旧栅格并覆盖它的导航点。
+  // app 的普通「保存」源图名就是目标名本身，不受影响。
+  if (!source_map_name.empty() && source_map_name != map_name &&
+      fs::exists(base_dir + "/" + map_name + ".yaml")) {
+    return {false, "map already exists"};
+  }
   try {
     const std::string yaml_path = base_dir + "/" + map_name + ".yaml";
     const std::string source_name = source_map_name.empty() ? GetCurrentMapName() : source_map_name;
