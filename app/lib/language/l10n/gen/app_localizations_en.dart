@@ -567,6 +567,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nav_stopped => 'Navigation Stopped';
 
   @override
+  String get stop_robot => 'Stop robot';
+
+  @override
+  String get robot_stopped => 'Robot stopped';
+
+  @override
+  String get task_layer_no_response => 'Task layer not responding, press again shortly';
+
+  @override
   String get legend_free => 'Free';
 
   @override

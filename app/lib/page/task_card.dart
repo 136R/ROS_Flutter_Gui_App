@@ -5,7 +5,7 @@ import 'package:ros_flutter_gui_app/provider/task_channel.dart';
 
 /// 浮在地图页底部居中的「任务卡」。
 ///
-/// 待命(IDLE)时整张隐藏，地图保持干净；只有 WAITING 时才长出那个
+/// 待命(IDLE)时整张隐藏，地图保持干净（有提示时除外，带 × 可关）；只有 WAITING 时才长出那个
 /// 「我倒完了，回去吧」大按钮 —— 语义唯一，不跟左下角的「停止导航」混
 /// （那个只在导航中出现，只表示取消导航）。
 class TaskCard extends StatelessWidget {
@@ -104,6 +104,19 @@ class _Card extends StatelessWidget {
       ]);
     }
 
+    // 待命但有提示（比如某站去不了、已跳过）：点 × 关掉，下一次召唤也会自动清掉
+    if (status.isIdle) {
+      return Row(children: [
+        const Icon(Icons.info_outline, size: 16, color: Color(0xFFE0A100)),
+        const SizedBox(width: 6),
+        const Expanded(child: Text('提示', style: strong)),
+        InkWell(
+          onTap: () => task.dismissError(),
+          child: const Icon(Icons.close, size: 18, color: Color(0xFF787E8A)),
+        ),
+      ]);
+    }
+
     // NAVIGATING / RETURNING
     final returning = status.isReturning;
     return Row(children: [
@@ -144,7 +157,7 @@ class _Card extends StatelessWidget {
     if (status.queue.isNotEmpty) {
       parts.add('排队中：${status.queue.join('、')}');
     }
-    if (status.isStopped && status.lastError.isNotEmpty) {
+    if ((status.isStopped || status.isIdle) && status.lastError.isNotEmpty) {
       return status.lastError;
     }
     if (status.isReturning && parts.isEmpty) return '队列为空';

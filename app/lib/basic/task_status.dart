@@ -51,6 +51,6 @@ class TaskStatus {
   bool get isReturning => state == 'RETURNING';
   bool get isStopped => state == 'STOPPED';
 
-  /// 待命时整张任务卡都不显示 —— 地图保持干净。
-  bool get shouldShowCard => !isIdle;
+  /// 待命时整张任务卡都不显示 —— 地图保持干净；除非有提示（比如"已跳过"）要给人看。
+  bool get shouldShowCard => !isIdle || lastError.isNotEmpty;
 }

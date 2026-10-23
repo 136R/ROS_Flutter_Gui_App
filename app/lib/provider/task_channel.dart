@@ -62,6 +62,12 @@ class TaskChannel {
   /// 清空整个召唤队列。
   Future<bool> cancelAll() => _post('/task/cancel_all');
 
+  /// 「停车」：取消导航、清空队列、原地停。再召唤一次才恢复。
+  Future<bool> stopAll() => _post('/task/stop');
+
+  /// 关掉待命时任务卡上的那条提示。
+  Future<bool> dismissError() => _post('/task/dismiss');
+
   Future<bool> _post(String path) async {
     try {
       final r = await http

@@ -562,6 +562,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nav_stopped => '导航已停止';
 
   @override
+  String get stop_robot => '停车';
+
+  @override
+  String get robot_stopped => '已停车';
+
+  @override
+  String get task_layer_no_response => '任务层没响应，请稍后再按一次';
+
+  @override
   String get legend_free => '自由';
 
   @override

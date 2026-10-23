@@ -1148,6 +1148,24 @@ abstract class AppLocalizations {
   /// **'导航已停止'**
   String get nav_stopped;
 
+  /// No description provided for @stop_robot.
+  ///
+  /// In zh, this message translates to:
+  /// **'停车'**
+  String get stop_robot;
+
+  /// No description provided for @robot_stopped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已停车'**
+  String get robot_stopped;
+
+  /// No description provided for @task_layer_no_response.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务层没响应，请稍后再按一次'**
+  String get task_layer_no_response;
+
   /// No description provided for @legend_free.
   ///
   /// In zh, this message translates to:

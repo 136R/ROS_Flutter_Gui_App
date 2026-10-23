@@ -549,9 +549,25 @@ class WsChannel {
   void setVw(double vw) => cmdVel_.vw = vw;
 
   void startMunalCtrl() {
+    // 只在摇杆推着时发；松手补一帧 0 后停发。一直发 0 会让 twist_mux 认为
+    // 摇杆（优先级 90）还活着，导航（70）的速度就永远过不去
+    bool lastWasZero = true;
     cmdVelTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+      final zero = cmdVel_.vx == 0 && cmdVel_.vy == 0 && cmdVel_.vw == 0;
+      if (zero && lastWasZero) return;
+      lastWasZero = zero;
       await sendSpeed(cmdVel_.vx, cmdVel_.vy, cmdVel_.vw);
+    });
+  }
+
+  /// 「停车」按钮：连发 1 秒零速，在任务层取消导航生效之前先把车按住
+  void sendStopBurst() {
+    int n = 0;
+    sendSpeed(0, 0, 0);
+    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (++n >= 10) timer.cancel();
+      sendSpeed(0, 0, 0);
     });
   }
 

@@ -858,6 +858,29 @@ class _MainFlamePageState extends State<MainFlamePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // 停车：任何时候都显示（手动模式、没在导航时也在），原地停 + 清空任务队列
+          _MapToolbarShell(
+            theme,
+            backgroundColor: Colors.red,
+            child: IconButton(
+              style: tbStyle,
+              icon: const Icon(Icons.pan_tool, color: Colors.white),
+              tooltip: l10n.stop_robot,
+              onPressed: () async {
+                Provider.of<WsChannel>(context, listen: false).sendStopBurst();
+                final ok = await context.read<TaskChannel>().stopAll();
+                if (!context.mounted) return;
+                // 弹在顶部中间：默认右上角会正好盖住这个按钮，3 秒内再按就按不到
+                toastification.show(
+                  context: context,
+                  alignment: Alignment.topCenter,
+                  title: Text(ok ? l10n.robot_stopped : l10n.task_layer_no_response),
+                  autoCloseDuration: const Duration(seconds: 3),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
           _MapToolbarShell(
             theme,
             child: IconButton(
