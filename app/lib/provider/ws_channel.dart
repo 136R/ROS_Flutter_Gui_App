@@ -320,7 +320,9 @@ class WsChannel {
   }
 
   void _onLaserScanMap(sensor_msg.LaserScanBaseFrame lm) {
-    final pose = robotPoseMap.value;
+    // 优先用后端按扫描时刻查的位姿，旋转时激光才对得上墙
+    final pose =
+        lm.hasRobotPose() ? _poseFromGpbPose(lm.robotPose) : robotPoseMap.value;
     final n = lm.x.length < lm.y.length ? lm.x.length : lm.y.length;
     final pts = <vm.Vector2>[];
     for (var i = 0; i < n; i++) {

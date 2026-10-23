@@ -147,10 +147,19 @@ const LaserScanBaseFrame$json = {
     },
     {'1': 'x', '3': 2, '4': 3, '5': 2, '10': 'x'},
     {'1': 'y', '3': 3, '4': 3, '5': 2, '10': 'y'},
+    {
+      '1': 'robot_pose',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.ros_gui_backend.pb.Pose',
+      '10': 'robotPose'
+    },
   ],
 };
 
 /// Descriptor for `LaserScanBaseFrame`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List laserScanBaseFrameDescriptor = $convert.base64Decode(
     'ChJMYXNlclNjYW5CYXNlRnJhbWUSMgoGaGVhZGVyGAEgASgLMhoucm9zX2d1aV9iYWNrZW5kLn'
-    'BiLkhlYWRlclIGaGVhZGVyEgwKAXgYAiADKAJSAXgSDAoBeRgDIAMoAlIBeQ==');
+    'BiLkhlYWRlclIGaGVhZGVyEgwKAXgYAiADKAJSAXgSDAoBeRgDIAMoAlIBeRI3Cgpyb2JvdF9w'
+    'b3NlGAQgASgLMhgucm9zX2d1aV9iYWNrZW5kLnBiLlBvc2VSCXJvYm90UG9zZQ==');

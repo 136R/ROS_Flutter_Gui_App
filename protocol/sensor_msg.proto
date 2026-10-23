@@ -46,4 +46,5 @@ message LaserScanBaseFrame {
   Header header = 1;
   repeated float x = 2;
   repeated float y = 3;
+  Pose robot_pose = 4;  // 扫描时刻 map 下的车位姿；查不到 TF 时不填
 }

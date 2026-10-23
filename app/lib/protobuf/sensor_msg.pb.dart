@@ -478,11 +478,13 @@ class LaserScanBaseFrame extends $pb.GeneratedMessage {
     $0.Header? header,
     $core.Iterable<$core.double>? x,
     $core.Iterable<$core.double>? y,
+    $0.Pose? robotPose,
   }) {
     final result = create();
     if (header != null) result.header = header;
     if (x != null) result.x.addAll(x);
     if (y != null) result.y.addAll(y);
+    if (robotPose != null) result.robotPose = robotPose;
     return result;
   }
 
@@ -504,6 +506,8 @@ class LaserScanBaseFrame extends $pb.GeneratedMessage {
         subBuilder: $0.Header.create)
     ..p<$core.double>(2, _omitFieldNames ? '' : 'x', $pb.PbFieldType.KF)
     ..p<$core.double>(3, _omitFieldNames ? '' : 'y', $pb.PbFieldType.KF)
+    ..aOM<$0.Pose>(4, _omitFieldNames ? '' : 'robotPose',
+        subBuilder: $0.Pose.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -541,6 +545,17 @@ class LaserScanBaseFrame extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(3)
   $pb.PbList<$core.double> get y => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $0.Pose get robotPose => $_getN(3);
+  @$pb.TagNumber(4)
+  set robotPose($0.Pose value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRobotPose() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRobotPose() => $_clearField(4);
+  @$pb.TagNumber(4)
+  $0.Pose ensureRobotPose() => $_ensure(3);
 }
 
 const $core.bool _omitFieldNames =

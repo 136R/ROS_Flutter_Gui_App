@@ -25,6 +25,12 @@ import 'package:ros_flutter_gui_app/page/ssh_widgets.dart';
 import 'package:ros_flutter_gui_app/page/task_card.dart';
 import 'package:ros_flutter_gui_app/provider/task_channel.dart';
 
+// 静止时里程计有 ±0.001 级噪声，toStringAsFixed 会显示成 -0.00，统一成 0.00
+String _fmtSpeed(double v) {
+  final s = v.toStringAsFixed(2);
+  return s == '-0.00' ? '0.00' : s;
+}
+
 class MainFlamePage extends StatefulWidget {
   @override
   _MainFlamePageState createState() => _MainFlamePageState();
@@ -449,7 +455,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                         Provider.of<WsChannel>(context, listen: true)
                             .robotSpeed_,
                     builder: (context, speed, child) {
-                      return Text('${(speed.vx).toStringAsFixed(2)} m/s');
+                      return Text('${_fmtSpeed(speed.vx)} m/s');
                     },
                   ),
                 ),
@@ -466,7 +472,7 @@ class _MainFlamePageState extends State<MainFlamePage> {
                             .robotSpeed_,
                     builder: (context, speed, child) {
                       return Text(
-                          '${rad2deg(speed.vw).toStringAsFixed(2)} deg/s');
+                          '${_fmtSpeed(rad2deg(speed.vw))} deg/s');
                     },
                   ),
                 ),

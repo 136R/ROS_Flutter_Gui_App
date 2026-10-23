@@ -395,6 +395,29 @@ void RosGuiNode::OnLaser(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
   lm->mutable_header()->set_frame_id(gui_settings_.BaseLinkFrameName);
   lm->mutable_header()->mutable_stamp()->set_sec(static_cast<int32_t>(msg->header.stamp.sec));
   lm->mutable_header()->mutable_stamp()->set_nanosec(static_cast<uint32_t>(msg->header.stamp.nanosec));
+  // 扫描时刻车在 map 下的位姿：前端用它摆点，旋转时激光不错位；查不到就不填，前端退回最新位姿
+  try {
+    geometry_msgs::msg::TransformStamped st;
+    try {
+      st = tf_buffer_->lookupTransform(
+          gui_settings_.MapFrameName, gui_settings_.BaseLinkFrameName, tf2_ros::fromMsg(msg->header.stamp));
+    } catch (const tf2::ExtrapolationException&) {
+      // 激光常比 TF 先到一个周期（~10ms），这时用此刻最新的 TF，差距远小于前端 50ms 定时推的位姿
+      st = tf_buffer_->lookupTransform(
+          gui_settings_.MapFrameName, gui_settings_.BaseLinkFrameName, tf2::TimePointZero);
+    }
+    const Pose2 p = TfToPose2(st.transform);
+    tf2::Quaternion q;
+    q.setRPY(0, 0, p.th);
+    auto* rp = lm->mutable_robot_pose();
+    rp->mutable_position()->set_x(p.x);
+    rp->mutable_position()->set_y(p.y);
+    rp->mutable_orientation()->set_x(q.x());
+    rp->mutable_orientation()->set_y(q.y());
+    rp->mutable_orientation()->set_z(q.z());
+    rp->mutable_orientation()->set_w(q.w());
+  } catch (const std::exception&) {
+  }
   const float a0 = msg->angle_min;
   const float inc = msg->angle_increment;
   for (size_t i = 0; i < msg->ranges.size(); ++i) {
